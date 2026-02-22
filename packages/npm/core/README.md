@@ -11,10 +11,14 @@ SDK is under active development. For verification today, use the [standalone ver
 ```js
 const { verifyProof, hashPayload, walkMerkleProof } = require('@ioproof/core');
 
-// Verify an exported proof bundle
+// Verify an exported proof bundle (works with both owner and user secrets)
 const result = await verifyProof(proofBundle);
-// { valid: true, steps: [...], onChainRoot: '...', merkleValid: true }
+// { valid: true, steps: [...], onChainRoot: '...', merkleValid: true, accessType: 'owner' | 'user' }
 ```
+
+## Dual-secret support
+
+IOProof generates two independent secrets per proof — one for the service owner, one for the end-user. Both unlock the same proof. `@ioproof/core` will support verifying with either secret.
 
 ## Related packages
 

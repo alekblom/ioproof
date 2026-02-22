@@ -11,6 +11,6 @@ Full SDK coming soon. For now, use the REST API directly:
     GET  https://ioproof.com/api/verify/:hash?secret=...
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Alexiuz AS"
 __url__ = "https://ioproof.com"

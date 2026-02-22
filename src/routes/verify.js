@@ -1,8 +1,17 @@
+const crypto = require('crypto');
 const { Router } = require('express');
 const { findByHash, findBatch, loadPayload } = require('../db');
 const { verifyMerkleProof } = require('../attestation/merkle');
 const { blindHash } = require('../attestation/hasher');
 const config = require('../config');
+
+/**
+ * Constant-time comparison of two hex strings.
+ */
+function safeEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+}
 
 const router = Router();
 
@@ -34,11 +43,21 @@ router.get('/:hash', (req, res) => {
     });
   }
 
-  // Verify the blinding: SHA-256(combined_hash | secret) should equal blindedHash
+  // Verify the secret: check owner secret (via blinding) or user secret (direct match)
   let secretValid = false;
+  let accessType = null;
   if (secret) {
+    // Owner secret: SHA-256(combined_hash | secret) should equal blindedHash
     const expectedBlinded = blindHash(proof.combinedHash, secret);
-    secretValid = expectedBlinded === proof.blindedHash;
+    if (expectedBlinded === proof.blindedHash) {
+      secretValid = true;
+      accessType = 'owner';
+    }
+    // User secret: alternative access for end-user (e.g. chat user in a dispute)
+    if (!secretValid && proof.userSecret && safeEqual(secret, proof.userSecret)) {
+      secretValid = true;
+      accessType = 'user';
+    }
   }
 
   // Base result — always safe to show (blinded hash is what's on-chain)
@@ -62,6 +81,9 @@ router.get('/:hash', (req, res) => {
 
   if (secret) {
     result.secret_valid = secretValid;
+    if (accessType) {
+      result.access_type = accessType;
+    }
   }
 
   // Only reveal full details if correct secret is provided
@@ -105,8 +127,11 @@ router.get('/export/:hash', (req, res) => {
     return res.status(404).json({ error: { message: 'Proof not found.', code: 'NOT_FOUND' } });
   }
 
+  // Accept either owner secret (via blinding) or user secret (direct match)
   const expectedBlinded = blindHash(proof.combinedHash, secret);
-  if (expectedBlinded !== proof.blindedHash) {
+  const isOwner = expectedBlinded === proof.blindedHash;
+  const isUser = !isOwner && proof.userSecret && safeEqual(secret, proof.userSecret);
+  if (!isOwner && !isUser) {
     return res.status(403).json({ error: { message: 'Invalid secret.', code: 'INVALID_SECRET' } });
   }
 

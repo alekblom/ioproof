@@ -40,12 +40,12 @@
           <div class="step">
             <span class="step-num">2</span>
             <strong>We hash &amp; blind</strong>
-            <p>SHA-256 hashes of the exact request and response bytes, combined with a random secret to produce a blinded hash. Only you get the secret.</p>
+            <p>SHA-256 hashes of the exact request and response bytes, combined with a random secret to produce a blinded hash. Two independent secrets are generated — one for you, one for the end-user.</p>
           </div>
           <div class="step">
             <span class="step-num">3</span>
             <strong>Full audit stored</strong>
-            <p>The complete request body, target URL, and response body are stored server-side. Only accessible with your secret for full privacy control.</p>
+            <p>The complete request body, target URL, and response body are stored server-side. Accessible only with a valid secret — either party can verify independently.</p>
           </div>
           <div class="step">
             <span class="step-num">4</span>
@@ -80,6 +80,25 @@
               <li>Individual proof hashes</li>
             </ul>
           </div>
+        </div>
+      </section>
+
+      <section class="dual-secrets" style="margin-top:2rem;">
+        <h3>Dual-secret verification</h3>
+        <p style="color:#aaa;max-width:700px;">Every proof generates two independent secrets — one for the service (owner), one for the end-user. Both can verify the exact same interaction without trusting each other.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;max-width:700px;">
+          <div style="padding:16px;background:#111;border-radius:8px;border:1px solid #222;">
+            <strong style="color:#1a73e8;font-size:0.85rem;">For services</strong>
+            <p style="color:#888;font-size:0.85rem;margin:8px 0 0;">Keep the owner secret server-side. Prove to regulators, auditors, or users exactly what your AI produced — with cryptographic certainty.</p>
+          </div>
+          <div style="padding:16px;background:#111;border-radius:8px;border:1px solid #222;">
+            <strong style="color:#1a73e8;font-size:0.85rem;">For end-users</strong>
+            <p style="color:#888;font-size:0.85rem;margin:8px 0 0;">Receive a verification link for every AI interaction. In a dispute, prove exactly what you asked and what you were told — independently, no trust required.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:16px;background:rgba(26,115,232,0.06);border:1px solid rgba(26,115,232,0.15);border-radius:8px;max-width:700px;">
+          <strong style="color:#fff;font-size:0.85rem;">How it works in practice</strong>
+          <p style="color:#888;font-size:0.85rem;margin:8px 0 0;">A service like a chatbot proxies user requests through IOProof. The API response includes both secrets. The service keeps <code style="color:#ccc;">secret</code> and gives <code style="color:#ccc;">user_secret</code> to the end-user (e.g. as a "View proof" link). Either party can access the full cryptographic proof and on-chain verification at any time.</p>
         </div>
       </section>
 

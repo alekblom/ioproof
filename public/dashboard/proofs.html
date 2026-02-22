@@ -67,13 +67,17 @@
         for (const p of data.items) {
           const statusCls = p.solanaStatus === 'confirmed' ? 'status-confirmed' : 'status-pending';
           const targetShort = p.targetUrl ? p.targetUrl.replace(/^https?:\/\//, '').split('/').slice(0, 2).join('/') : '-';
+          const userUrl = p.userSecret ? (window.location.origin + '/verify/' + p.combinedHash + '?secret=' + p.userSecret) : '';
           html += '<tr>' +
             '<td class="mono">' + truncHash(p.combinedHash) + '</td>' +
             '<td>' + (p.provider || '-') + '</td>' +
             '<td style="color:#888;font-size:0.8rem;">' + esc(targetShort) + '</td>' +
             '<td class="' + statusCls + '">' + p.solanaStatus + '</td>' +
             '<td>' + timeAgo(p.createdAt) + '</td>' +
-            '<td><button class="btn-small" onclick="viewProof(\'' + p.combinedHash + '\',\'' + (p.secret || '') + '\')">View</button></td>' +
+            '<td style="display:flex;gap:4px;">' +
+              '<button class="btn-small" onclick="viewProof(\'' + p.combinedHash + '\',\'' + (p.secret || '') + '\',\'' + (p.userSecret || '') + '\')">View</button>' +
+              (userUrl ? '<button class="btn-small" style="background:#1a73e8;" onclick="copyUserLink(\'' + esc(userUrl) + '\',this)">Share</button>' : '') +
+            '</td>' +
             '</tr>';
         }
         html += '</tbody></table>';
@@ -93,7 +97,15 @@
       } catch { /* handled by fetchAPI */ }
     }
 
-    async function viewProof(hash, secret) {
+    function copyUserLink(url, btn) {
+      navigator.clipboard.writeText(url).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    }
+
+    async function viewProof(hash, secret, userSecret) {
       document.getElementById('proofs-list').style.display = 'none';
       document.getElementById('pagination').style.display = 'none';
       const detail = document.getElementById('proof-detail');
@@ -131,6 +143,16 @@
           }
           if (data.merkle_valid !== undefined) {
             html += field('Merkle Valid', data.merkle_valid ? '<span class="status-confirmed">Yes</span>' : '<span style="color:#f44336">No</span>');
+          }
+
+          // User secret section
+          if (userSecret) {
+            const userVerifyUrl = window.location.origin + '/verify/' + hash + '?secret=' + userSecret;
+            html += '<div style="background:rgba(26,115,232,0.08);border:1px solid rgba(26,115,232,0.2);border-radius:6px;padding:12px;margin-top:16px;">';
+            html += '<div style="font-size:0.8rem;color:#8ab4f8;margin-bottom:6px;font-weight:600;">End-User Verification Link</div>';
+            html += '<div style="font-family:monospace;font-size:0.75rem;color:#ccc;word-break:break-all;margin-bottom:8px;">' + esc(userVerifyUrl) + '</div>';
+            html += '<button class="btn-small" style="background:#1a73e8;" onclick="copyUserLink(\'' + esc(userVerifyUrl) + '\',this)">Copy Share Link</button>';
+            html += '</div>';
           }
 
           // Actions

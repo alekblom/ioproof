@@ -1,6 +1,6 @@
 # @ioproof/client
 
-HTTP client for the IOProof API — proxy AI calls with cryptographic attestation.
+HTTP client for the IOProof API — proxy AI calls with cryptographic attestation and dual-secret verification.
 
 ## Status
 
@@ -22,9 +22,15 @@ const result = await client.proxy('openai', '/v1/chat/completions', {
   body: { model: 'gpt-4o', messages: [{ role: 'user', content: 'Hello' }] },
 });
 
-console.log(result.provider_response); // Original AI response
-console.log(result.verification.secret); // Your proof secret
+console.log(result.provider_response);          // Original AI response
+console.log(result.verification.secret);        // Owner secret (keep server-side)
+console.log(result.verification.user_secret);   // User secret (give to end-user)
+console.log(result.verification.user_verify_url); // Verification link for end-user
 ```
+
+## Dual-secret verification
+
+Every proof generates two independent secrets. The service keeps `secret` and gives `user_secret` to the end-user. Both can verify the full interaction independently — ideal for dispute resolution and regulatory compliance.
 
 ## Related packages
 

@@ -7,10 +7,10 @@ Cryptographic attestation proxy for AI interactions. Proves what inputs were sen
 IOProof sits between you and any API provider. For every API call:
 
 1. **SHA-256 hashes** the exact request and response payloads
-2. **Generates a secret** — a random 256-bit nonce unique to this proof
-3. **Blinds the proof** — `SHA-256(combined_hash | secret)` produces a blinded hash
+2. **Generates dual secrets** — two independent 256-bit nonces: one for the API caller (owner), one for the end-user
+3. **Blinds the proof** — `SHA-256(combined_hash | owner_secret)` produces a blinded hash
 4. **Queues** the blinded proof for the next Merkle batch
-5. **Returns** the API response alongside a verification receipt (including the secret)
+5. **Returns** the API response alongside a verification receipt (including both secrets)
 
 Periodically (default: hourly), the batch processor:
 
@@ -19,7 +19,7 @@ Periodically (default: hourly), the batch processor:
 3. Commits the Merkle root to Solana in a single transaction
 4. Stores individual Merkle paths for each proof
 
-The result is tamper-evident, on-chain records — without exposing any interaction data. Only someone with the secret can link a proof back to the original request/response.
+The result is tamper-evident, on-chain records — without exposing any interaction data. Either secret can independently link a proof back to the original request/response — so both parties (e.g. a service and its end-user) can verify without trusting each other.
 
 ## Providers
 
@@ -155,10 +155,12 @@ Every response wraps the provider's original response with a verification receip
     "combined_hash": "sha256:789ghi...",
     "blinded_hash": "sha256:b1inded...",
     "secret": "a1b2c3d4...64-char-hex...",
+    "user_secret": "e5f6a7b8...64-char-hex...",
     "timestamp": "2026-02-20T17:45:00.000Z",
     "batch_status": "pending_batch",
     "verify_url": "https://ioproof.com/verify/789ghi...?secret=a1b2c3d4...",
-    "privacy_note": "Only the blinded_hash appears on-chain. Keep your secret to verify ownership."
+    "user_verify_url": "https://ioproof.com/verify/789ghi...?secret=e5f6a7b8...",
+    "privacy_note": "Only the blinded_hash appears on-chain. Give user_secret to the end-user so both parties can verify."
   }
 }
 ```
@@ -179,6 +181,7 @@ curl "https://ioproof.com/api/verify/789ghi...?secret=a1b2c3d4..."
   "merkle_proof": [{"hash": "...", "position": "left"}, ...],
   "merkle_valid": true,
   "secret_valid": true,
+  "access_type": "owner",
   "combined_hash": "789ghi...",
   "request_hash": "abc123...",
   "response_hash": "def456...",
@@ -312,7 +315,7 @@ REQUIRE_API_KEY=false
 1. The proxy captures the **exact raw bytes** of every request and response
 2. SHA-256 hashes are computed before any parsing or transformation
 3. A combined hash is created: `SHA-256(request_hash + "|" + response_hash + "|" + timestamp)`
-4. A random 256-bit **secret** is generated and a **blinded hash** is created: `SHA-256(combined_hash + "|" + secret)`
+4. Two random 256-bit **secrets** are generated (owner + user) and a **blinded hash** is created: `SHA-256(combined_hash + "|" + owner_secret)`
 5. The full request body, target URL, and response body are **stored server-side** for audit retrieval
 6. The **blinded hash** (not the combined hash) is used as the Merkle leaf
 7. Proofs are collected and a Merkle tree is built from their blinded hashes
@@ -350,12 +353,19 @@ IOProof uses **blinded commitments** to ensure no interaction data is exposed on
 | Solana transaction signature | Individual proof hashes |
 | | API keys are **never** stored |
 
-**How it works**: Each proof is blinded with a unique secret before being included in the Merkle tree. The secret acts as a cryptographic nonce — without it, the blinded hash cannot be linked back to the original interaction. The secret is only given to the API caller in their receipt.
+**How it works**: Each proof is blinded with a unique secret before being included in the Merkle tree. The secret acts as a cryptographic nonce — without it, the blinded hash cannot be linked back to the original interaction.
+
+**Dual secrets**: Every proof generates two independent secrets:
+- **`secret`** (owner) — returned to the API caller (e.g. a service like Botlor)
+- **`user_secret`** — intended for the end-user (e.g. a chat user)
+
+Both secrets independently unlock full proof details. The caller keeps one and gives `user_secret` to their end-user. In a dispute, both parties can independently verify the exact request and response without relying on each other.
 
 **What this means**:
 - **On-chain**: an observer sees only a Merkle root — they cannot determine how many proofs are in the tree, what providers were used, or any request/response content
-- **On IOProof**: full data is stored but only accessible with the secret — proving ownership of the interaction
-- **Selective disclosure**: share your secret with a third party to prove a specific interaction occurred, without revealing any other proofs in the same batch
+- **On IOProof**: full data is stored but only accessible with a valid secret — proving involvement in the interaction
+- **Multi-party trust**: both the service and its end-user can verify independently — neither needs to trust the other
+- **Selective disclosure**: share a secret with a third party to prove a specific interaction occurred, without revealing any other proofs in the same batch
 
 This is a zero-knowledge-style approach using hash-based commitments — no complex ZK circuits required, just SHA-256 blinding with random nonces.
 

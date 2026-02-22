@@ -1,10 +1,18 @@
 # ioproof
 
-Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments and zero-knowledge privacy.
+Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments, zero-knowledge privacy, and dual-secret verification.
 
 ## Status
 
 Python SDK is under active development. For now, use the REST API directly.
+
+## Key feature: Dual-secret verification
+
+Every proof generates two independent secrets:
+- **`secret`** — for the API caller (service/owner)
+- **`user_secret`** — for the end-user
+
+Both secrets independently unlock full proof details. The service keeps one and gives the other to the end-user. In a dispute, both parties can verify the exact request and response against the on-chain proof — without trusting each other.
 
 ## Quick start (REST API)
 
@@ -25,8 +33,10 @@ response = requests.post(
 )
 
 data = response.json()
-print(data["provider_response"])       # Original AI response
-print(data["verification"]["secret"])  # Your proof secret
+print(data["provider_response"])              # Original AI response
+print(data["verification"]["secret"])         # Owner secret (keep server-side)
+print(data["verification"]["user_secret"])    # User secret (give to end-user)
+print(data["verification"]["user_verify_url"])  # Verification link for end-user
 ```
 
 ## Planned API
@@ -44,7 +54,8 @@ result = client.proxy(
 )
 
 print(result.provider_response)
-print(result.verification.secret)
+print(result.verification.secret)        # Owner secret
+print(result.verification.user_secret)   # User secret
 ```
 
 ## Links

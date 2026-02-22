@@ -1,7 +1,7 @@
 {
   "name": "ioproof",
-  "version": "0.1.0",
-  "description": "Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments and zero-knowledge privacy",
+  "version": "0.2.0",
+  "description": "Cryptographic attestation for AI interactions — dual-secret verification, Merkle-batched Solana commitments, zero-knowledge privacy",
   "main": "index.js",
   "types": "index.d.ts",
   "keywords": [

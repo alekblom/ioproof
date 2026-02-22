@@ -120,6 +120,7 @@ function getAllProofsForUser(userId, page = 1, perPage = 20) {
     combinedHash: p.combinedHash,
     blindedHash: p.blindedHash,
     secret: p.secret || null,
+    userSecret: p.userSecret || null,
     provider: p.provider,
     targetUrl: p.targetUrl,
     responseStatus: p.responseStatus,

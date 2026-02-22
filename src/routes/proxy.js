@@ -63,8 +63,11 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
     // 5. Build combined hash
     const combinedHash = buildCombinedHash(requestHash, responseHash, timestamp);
 
-    // 6. Generate blinding secret — only the caller receives this
+    // 6. Generate dual secrets for multi-party verification
+    //    ownerSecret: for the API caller (e.g. Botlor service)
+    //    userSecret:  for the end-user (e.g. chat user) — both can verify independently
     const secret = generateSecret();
+    const userSecret = generateSecret();
     const blindedHash = blindHash(combinedHash, secret);
 
     // 7. Store proof + full payloads for audit trail
@@ -72,6 +75,7 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
       combinedHash,
       blindedHash,
       secret,
+      userSecret,
       requestHash,
       responseHash,
       timestamp,
@@ -105,6 +109,7 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
       combinedHash,
       blindedHash,
       secret,
+      userSecret,
       timestamp,
     });
 

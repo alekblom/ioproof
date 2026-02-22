@@ -1,7 +1,7 @@
 {
   "name": "@ioproof/client",
-  "version": "0.1.0",
-  "description": "HTTP client for the IOProof API — proxy AI calls with cryptographic attestation",
+  "version": "0.2.0",
+  "description": "HTTP client for the IOProof API — proxy AI calls with cryptographic attestation and dual-secret verification",
   "main": "index.js",
   "types": "index.d.ts",
   "keywords": [

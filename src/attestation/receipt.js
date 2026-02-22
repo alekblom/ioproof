@@ -1,16 +1,18 @@
 const config = require('../config');
 
-function buildReceipt({ requestHash, responseHash, combinedHash, blindedHash, secret, timestamp, solanaResult, batchId, merkleRoot, merkleProof }) {
+function buildReceipt({ requestHash, responseHash, combinedHash, blindedHash, secret, userSecret, timestamp, solanaResult, batchId, merkleRoot, merkleProof }) {
   const receipt = {
     request_hash: `sha256:${requestHash}`,
     response_hash: `sha256:${responseHash}`,
     combined_hash: `sha256:${combinedHash}`,
     blinded_hash: `sha256:${blindedHash}`,
     secret,
+    user_secret: userSecret,
     timestamp,
     batch_status: 'pending_batch',
     verify_url: `${config.baseUrl}/verify/${combinedHash}?secret=${secret}`,
-    privacy_note: 'Only the blinded_hash appears on-chain. Keep your secret to verify ownership.',
+    user_verify_url: `${config.baseUrl}/verify/${combinedHash}?secret=${userSecret}`,
+    privacy_note: 'Only the blinded_hash appears on-chain. Give user_secret to the end-user so both parties can verify.',
   };
 
   // If already batched (unlikely in real-time, but possible for re-queries)

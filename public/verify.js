@@ -57,6 +57,8 @@
 
       // If secret was valid, show full details
       if (data.secret_valid) {
+        var accessLabel = data.access_type === 'user' ? 'End-User' : 'Owner';
+        html += '<div style="background:rgba(52,168,83,0.1);border:1px solid rgba(52,168,83,0.3);border-radius:6px;padding:10px 14px;margin-bottom:16px;color:#34a853;font-size:0.85rem;">Verified as <strong>' + accessLabel + '</strong></div>';
         html += field('Status', '<span class="' + statusClass + '">' + statusLabel + '</span>');
         html += field('Combined Hash', data.combined_hash);
         html += field('Request Hash', data.request_hash);
