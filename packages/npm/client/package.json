@@ -1,0 +1,28 @@
+{
+  "name": "@ioproof/client",
+  "version": "0.1.0",
+  "description": "HTTP client for the IOProof API — proxy AI calls with cryptographic attestation",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [
+    "ioproof",
+    "client",
+    "api",
+    "proxy",
+    "ai",
+    "attestation",
+    "openai",
+    "anthropic"
+  ],
+  "author": "Alexiuz AS",
+  "license": "MIT",
+  "homepage": "https://ioproof.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alekblom/ioproof.git",
+    "directory": "packages/npm/client"
+  },
+  "bugs": {
+    "url": "https://github.com/alekblom/ioproof/issues"
+  }
+}

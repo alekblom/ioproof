@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Proofs - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <h2>My Proofs</h2>
+
+      <div id="proofs-list"></div>
+      <div id="pagination"></div>
+
+      <!-- Proof detail overlay -->
+      <div id="proof-detail" style="display:none;">
+        <button class="back-btn" id="back-to-list">Back to list</button>
+        <div id="detail-content"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script>
+    let currentPage = 1;
+
+    async function loadProofs(page) {
+      currentPage = page;
+      const container = document.getElementById('proofs-list');
+      const detail = document.getElementById('proof-detail');
+      detail.style.display = 'none';
+      container.style.display = 'block';
+
+      try {
+        const res = await fetchAPI('/api/dashboard/proofs?page=' + page);
+        const data = await res.json();
+
+        if (data.total === 0) {
+          container.innerHTML = '<div class="empty-state">No proofs yet. Make your first API call to get started.</div>';
+          document.getElementById('pagination').innerHTML = '';
+          return;
+        }
+
+        let html = '<table class="dash-table"><thead><tr><th>Hash</th><th>Provider</th><th>Target</th><th>Status</th><th>When</th><th></th></tr></thead><tbody>';
+        for (const p of data.items) {
+          const statusCls = p.solanaStatus === 'confirmed' ? 'status-confirmed' : 'status-pending';
+          const targetShort = p.targetUrl ? p.targetUrl.replace(/^https?:\/\//, '').split('/').slice(0, 2).join('/') : '-';
+          html += '<tr>' +
+            '<td class="mono">' + truncHash(p.combinedHash) + '</td>' +
+            '<td>' + (p.provider || '-') + '</td>' +
+            '<td style="color:#888;font-size:0.8rem;">' + esc(targetShort) + '</td>' +
+            '<td class="' + statusCls + '">' + p.solanaStatus + '</td>' +
+            '<td>' + timeAgo(p.createdAt) + '</td>' +
+            '<td><button class="btn-small" onclick="viewProof(\'' + p.combinedHash + '\',\'' + (p.secret || '') + '\')">View</button></td>' +
+            '</tr>';
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // Pagination
+        let pagHtml = '<div class="pag">';
+        if (data.page > 1) {
+          pagHtml += '<button class="btn-small" onclick="loadProofs(' + (data.page - 1) + ')">Prev</button> ';
+        }
+        pagHtml += '<span style="color:#888;font-size:0.85rem;">Page ' + data.page + ' of ' + data.pages + ' (' + data.total + ' proofs)</span>';
+        if (data.page < data.pages) {
+          pagHtml += ' <button class="btn-small" onclick="loadProofs(' + (data.page + 1) + ')">Next</button>';
+        }
+        pagHtml += '</div>';
+        document.getElementById('pagination').innerHTML = pagHtml;
+      } catch { /* handled by fetchAPI */ }
+    }
+
+    async function viewProof(hash, secret) {
+      document.getElementById('proofs-list').style.display = 'none';
+      document.getElementById('pagination').style.display = 'none';
+      const detail = document.getElementById('proof-detail');
+      const content = document.getElementById('detail-content');
+      detail.style.display = 'block';
+      content.innerHTML = '<p style="color:#888;">Loading...</p>';
+
+      try {
+        let url = '/api/verify/' + hash;
+        if (secret) url += '?secret=' + secret;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.found) {
+          content.innerHTML = '<p style="color:#f44336;">Proof not found.</p>';
+          return;
+        }
+
+        let html = '<div class="proof-card">';
+        const statusCls = data.solana_status === 'confirmed' ? 'status-confirmed' : 'status-pending';
+
+        if (data.secret_valid) {
+          html += field('Status', '<span class="' + statusCls + '">' + data.solana_status + '</span>');
+          html += field('Combined Hash', data.combined_hash);
+          html += field('Blinded Hash', data.blinded_hash);
+          html += field('Request Hash', data.request_hash);
+          html += field('Response Hash', data.response_hash);
+          html += field('Timestamp', data.timestamp);
+          html += field('Provider', data.provider);
+          if (data.target_url) html += field('Target URL', data.target_url);
+          if (data.response_status) html += field('HTTP Status', data.response_status);
+          if (data.batch_id) html += field('Batch ID', data.batch_id);
+          if (data.solana_signature) {
+            html += field('Solana TX', '<a href="' + esc(data.explorer_url) + '" target="_blank" rel="noopener">' + truncHash(data.solana_signature, 20) + '</a>');
+          }
+          if (data.merkle_valid !== undefined) {
+            html += field('Merkle Valid', data.merkle_valid ? '<span class="status-confirmed">Yes</span>' : '<span style="color:#f44336">No</span>');
+          }
+
+          // Actions
+          html += '<div style="margin-top:16px;display:flex;gap:8px;">';
+          html += '<a href="/verify/' + hash + '?secret=' + secret + '" class="btn-small" target="_blank">Open Verify Page</a>';
+          if (data.solana_status === 'confirmed') {
+            html += '<a href="/api/verify/export/' + hash + '?secret=' + secret + '" class="btn-small" download>Export Bundle</a>';
+          }
+          html += '</div>';
+          html += '</div>';
+
+          // Payloads
+          if (data.request_body || data.response_body) {
+            html += '<div class="proof-card" style="margin-top:16px;">';
+            html += '<h3 style="margin:0 0 12px;font-size:1rem;color:#1a73e8;text-transform:none;letter-spacing:normal;">Payloads</h3>';
+            if (data.request_body) {
+              html += '<div class="payload-section"><div class="payload-label">Request Body</div><pre class="payload-content">' + formatJson(data.request_body) + '</pre></div>';
+            }
+            if (data.response_body) {
+              html += '<div class="payload-section"><div class="payload-label">Response Body</div><pre class="payload-content">' + formatJson(data.response_body) + '</pre></div>';
+            }
+            html += '</div>';
+          }
+        } else {
+          html += field('Blinded Hash', data.blinded_hash);
+          html += field('Status', '<span class="' + statusCls + '">' + data.solana_status + '</span>');
+          html += '<p style="color:#888;margin-top:12px;">Secret not available for this proof. If you saved the receipt, use the verify page with your secret.</p>';
+          html += '</div>';
+        }
+
+        content.innerHTML = html;
+      } catch (err) {
+        content.innerHTML = '<p style="color:#f44336;">Error: ' + esc(err.message) + '</p>';
+      }
+    }
+
+    document.getElementById('back-to-list').addEventListener('click', () => {
+      document.getElementById('proof-detail').style.display = 'none';
+      document.getElementById('proofs-list').style.display = 'block';
+      document.getElementById('pagination').style.display = 'block';
+    });
+
+    function field(label, value) {
+      return '<div class="proof-field"><span class="proof-label">' + label + '</span><span class="proof-value">' + value + '</span></div>';
+    }
+
+    function esc(text) {
+      if (!text) return '';
+      var d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    function formatJson(raw) {
+      try {
+        return esc(JSON.stringify(JSON.parse(raw), null, 2));
+      } catch { return esc(raw); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => loadProofs(1));
+  </script>
+</body>
+</html>

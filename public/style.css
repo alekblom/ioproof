@@ -242,6 +242,51 @@ button:hover {
   letter-spacing: normal;
 }
 
+.payload-section {
+  margin-bottom: 16px;
+}
+
+.payload-section:last-child {
+  margin-bottom: 0;
+}
+
+.payload-label {
+  color: #888;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.payload-content {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 0.8rem;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.export-btn {
+  display: inline-block;
+  background: #1a73e8;
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.export-btn:hover {
+  background: #1557b0;
+  text-decoration: none;
+}
+
 footer {
   border-top: 1px solid #222;
   padding: 24px 0;

@@ -1,13 +1,15 @@
 const { Router } = require('express');
 const { getProvider } = require('../providers');
-const { sha256, buildCombinedHash } = require('../attestation/hasher');
+const { sha256, buildCombinedHash, generateSecret, blindHash } = require('../attestation/hasher');
 const { buildReceipt } = require('../attestation/receipt');
-const { insertProof } = require('../db');
+const { insertProof, storePayload } = require('../db');
+const { apiKeyAuth } = require('../middleware/apiKeyAuth');
+const { incrementUsage } = require('../auth/usage');
 
 const router = Router();
 
-// POST /v1/proxy/:provider/*
-router.post('/:provider/*', async (req, res, next) => {
+// POST /v1/proxy/:provider/* — API key auth (skipped if REQUIRE_API_KEY=false)
+router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
   try {
     const providerName = req.params.provider;
     const provider = getProvider(providerName);
@@ -61,13 +63,22 @@ router.post('/:provider/*', async (req, res, next) => {
     // 5. Build combined hash
     const combinedHash = buildCombinedHash(requestHash, responseHash, timestamp);
 
-    // 6. Store proof locally — marked as pending_batch (Merkle batch processor handles Solana)
+    // 6. Generate blinding secret — only the caller receives this
+    const secret = generateSecret();
+    const blindedHash = blindHash(combinedHash, secret);
+
+    // 7. Store proof + full payloads for audit trail
     insertProof({
       combinedHash,
+      blindedHash,
+      secret,
       requestHash,
       responseHash,
       timestamp,
       provider: providerName,
+      targetUrl,
+      responseStatus: providerRes.status,
+      userId: req.iopUser?.id || null,
       solanaSignature: null,
       solanaSlot: null,
       solanaStatus: 'pending_batch',
@@ -76,15 +87,28 @@ router.post('/:provider/*', async (req, res, next) => {
       merkleProof: null,
     });
 
-    // 7. Build receipt (shows pending_batch status)
+    // Store raw payloads as separate files (can be large)
+    storePayload(combinedHash, {
+      request: req.rawBody.toString('utf-8'),
+      response: responseBuffer.toString('utf-8'),
+    });
+
+    // Track usage
+    if (req.iopUser) {
+      incrementUsage(req.iopUser.id);
+    }
+
+    // 8. Build receipt (shows pending_batch status, includes secret for verification)
     const verification = buildReceipt({
       requestHash,
       responseHash,
       combinedHash,
+      blindedHash,
+      secret,
       timestamp,
     });
 
-    // 8. Parse provider response and return envelope
+    // 9. Parse provider response and return envelope
     let providerResponse;
     try {
       providerResponse = JSON.parse(responseBuffer.toString('utf-8'));

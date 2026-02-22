@@ -1,0 +1,77 @@
+Metadata-Version: 2.4
+Name: ioproof
+Version: 0.1.0
+Summary: Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments and zero-knowledge privacy
+Author-email: Alexiuz AS <hello@alexiuz.com>
+License: MIT
+Project-URL: Homepage, https://ioproof.com
+Project-URL: Repository, https://github.com/alekblom/ioproof
+Project-URL: Issues, https://github.com/alekblom/ioproof/issues
+Keywords: ai,attestation,proof,cryptographic,verification,solana,merkle,openai,anthropic,llm
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Security :: Cryptography
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+
+# ioproof
+
+Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments and zero-knowledge privacy.
+
+## Status
+
+Python SDK is under active development. For now, use the REST API directly.
+
+## Quick start (REST API)
+
+```python
+import requests
+
+response = requests.post(
+    "https://ioproof.com/v1/proxy/openai/v1/chat/completions",
+    headers={
+        "Content-Type": "application/json",
+        "X-IOProof-Key": "iop_live_your_key",
+        "X-Provider-Key": "sk-your-openai-key",
+    },
+    json={
+        "model": "gpt-4o",
+        "messages": [{"role": "user", "content": "Hello"}],
+    },
+)
+
+data = response.json()
+print(data["provider_response"])       # Original AI response
+print(data["verification"]["secret"])  # Your proof secret
+```
+
+## Planned API
+
+```python
+from ioproof import IOProofClient
+
+client = IOProofClient(api_key="iop_live_...")
+
+result = client.proxy(
+    provider="openai",
+    path="/v1/chat/completions",
+    provider_key="sk-...",
+    body={"model": "gpt-4o", "messages": [{"role": "user", "content": "Hello"}]},
+)
+
+print(result.provider_response)
+print(result.verification.secret)
+```
+
+## Links
+
+- [Website](https://ioproof.com)
+- [GitHub](https://github.com/alekblom/ioproof)
+- [npm packages](https://www.npmjs.com/package/ioproof)
+
+## License
+
+MIT — [Alexiuz AS](https://alexiuz.com)

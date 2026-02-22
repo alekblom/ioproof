@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+ioproof/__init__.py
+ioproof.egg-info/PKG-INFO
+ioproof.egg-info/SOURCES.txt
+ioproof.egg-info/dependency_links.txt
+ioproof.egg-info/top_level.txt

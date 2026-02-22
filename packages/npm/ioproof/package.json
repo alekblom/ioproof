@@ -1,0 +1,30 @@
+{
+  "name": "ioproof",
+  "version": "0.1.0",
+  "description": "Cryptographic attestation for AI interactions — tamper-evident proofs with Merkle-batched Solana commitments and zero-knowledge privacy",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [
+    "ai",
+    "attestation",
+    "proof",
+    "cryptographic",
+    "verification",
+    "solana",
+    "merkle",
+    "zero-knowledge",
+    "openai",
+    "anthropic",
+    "llm"
+  ],
+  "author": "Alexiuz AS",
+  "license": "MIT",
+  "homepage": "https://ioproof.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alekblom/ioproof.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alekblom/ioproof/issues"
+  }
+}

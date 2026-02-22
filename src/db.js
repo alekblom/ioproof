@@ -2,11 +2,15 @@ const fs = require('fs');
 const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
+const PAYLOADS_DIR = path.join(DATA_DIR, 'payloads');
 const DB_PATH = path.join(DATA_DIR, 'proofs.json');
 const BATCHES_PATH = path.join(DATA_DIR, 'batches.json');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!fs.existsSync(PAYLOADS_DIR)) {
+  fs.mkdirSync(PAYLOADS_DIR, { recursive: true });
 }
 
 // --- Proofs ---
@@ -45,15 +49,15 @@ function getPendingProofs() {
   return proofs.filter((p) => p.solanaStatus === 'pending_batch');
 }
 
-function updateProofsBatch(combinedHashes, batchData) {
+function updateProofsBatch(blindedHashes, batchData) {
   const proofs = loadProofs();
-  const hashSet = new Set(combinedHashes);
+  const hashSet = new Set(blindedHashes);
   for (const proof of proofs) {
-    if (hashSet.has(proof.combinedHash)) {
+    if (hashSet.has(proof.blindedHash)) {
       proof.solanaStatus = 'confirmed';
       proof.batchId = batchData.batchId;
       proof.merkleRoot = batchData.merkleRoot;
-      proof.merkleProof = batchData.proofs[proof.combinedHash] || null;
+      proof.merkleProof = batchData.proofs[proof.blindedHash] || null;
       proof.solanaSignature = batchData.signature;
       proof.solanaSlot = batchData.slot;
     }
@@ -90,6 +94,60 @@ function findBatch(batchId) {
   return batches.find((b) => b.batchId === batchId) || null;
 }
 
+function getRecentProofsForUser(userId, limit = 10) {
+  const proofs = loadProofs();
+  return proofs
+    .filter((p) => p.userId === userId)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .slice(0, limit)
+    .map((p) => ({
+      combinedHash: p.combinedHash,
+      provider: p.provider,
+      responseStatus: p.responseStatus,
+      solanaStatus: p.solanaStatus,
+      createdAt: p.created_at,
+    }));
+}
+
+function getAllProofsForUser(userId, page = 1, perPage = 20) {
+  const proofs = loadProofs();
+  const userProofs = proofs
+    .filter((p) => p.userId === userId)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  const total = userProofs.length;
+  const start = (page - 1) * perPage;
+  const items = userProofs.slice(start, start + perPage).map((p) => ({
+    combinedHash: p.combinedHash,
+    blindedHash: p.blindedHash,
+    secret: p.secret || null,
+    provider: p.provider,
+    targetUrl: p.targetUrl,
+    responseStatus: p.responseStatus,
+    solanaStatus: p.solanaStatus,
+    batchId: p.batchId || null,
+    solanaSignature: p.solanaSignature || null,
+    createdAt: p.created_at,
+  }));
+  return { items, total, page, perPage, pages: Math.ceil(total / perPage) };
+}
+
+// --- Payloads (stored as individual files to keep proof index lean) ---
+
+function storePayload(combinedHash, { request, response }) {
+  const filePath = path.join(PAYLOADS_DIR, `${combinedHash}.json`);
+  fs.writeFileSync(filePath, JSON.stringify({ request, response }));
+}
+
+function loadPayload(combinedHash) {
+  const filePath = path.join(PAYLOADS_DIR, `${combinedHash}.json`);
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   insertProof,
   findByHash,
@@ -97,4 +155,8 @@ module.exports = {
   updateProofsBatch,
   insertBatch,
   findBatch,
+  storePayload,
+  loadPayload,
+  getRecentProofsForUser,
+  getAllProofsForUser,
 };

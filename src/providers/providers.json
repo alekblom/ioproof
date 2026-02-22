@@ -1,0 +1,21 @@
+{
+  "openai": {
+    "baseUrl": "https://api.openai.com",
+    "authType": "bearer"
+  },
+  "anthropic": {
+    "baseUrl": "https://api.anthropic.com",
+    "authType": "header",
+    "authHeader": "x-api-key",
+    "extraHeaders": { "anthropic-version": "2023-06-01" }
+  },
+  "xai": {
+    "baseUrl": "https://api.x.ai",
+    "authType": "bearer"
+  },
+  "gemini": {
+    "baseUrl": "https://generativelanguage.googleapis.com",
+    "authType": "header",
+    "authHeader": "x-goog-api-key"
+  }
+}

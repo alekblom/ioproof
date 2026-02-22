@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <h2>Overview</h2>
+
+      <div class="usage-meter" id="usage-meter"></div>
+
+      <div class="stat-cards" id="stat-cards"></div>
+
+      <h3 style="text-transform:none;letter-spacing:normal;margin-bottom:16px;">Recent Proofs</h3>
+      <div id="recent-proofs"></div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script>
+    async function loadOverview() {
+      try {
+        const res = await fetchAPI('/api/dashboard/stats');
+        const data = await res.json();
+
+        // Usage meter
+        renderUsageMeter(document.getElementById('usage-meter'), data.usage.used, data.usage.limit);
+
+        // Stat cards
+        document.getElementById('stat-cards').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-label">Proofs This Month</div>
+            <div class="stat-value">${data.usage.used}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active API Keys</div>
+            <div class="stat-value">${data.keys.active}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tier</div>
+            <div class="stat-value">${data.user.tierName}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Monthly Limit</div>
+            <div class="stat-value">${data.usage.limit}</div>
+          </div>
+        `;
+
+        // Recent proofs
+        const container = document.getElementById('recent-proofs');
+        if (data.recentProofs.length === 0) {
+          container.innerHTML = '<div class="empty-state">No proofs yet. Make your first API call to get started.</div>';
+          return;
+        }
+
+        let html = '<table class="dash-table"><thead><tr><th>Hash</th><th>Provider</th><th>Status</th><th>When</th></tr></thead><tbody>';
+        for (const p of data.recentProofs) {
+          const statusCls = p.solanaStatus === 'confirmed' ? 'status-confirmed' : 'status-pending';
+          html += `<tr>
+            <td class="mono">${truncHash(p.combinedHash)}</td>
+            <td>${p.provider || '-'}</td>
+            <td class="${statusCls}">${p.solanaStatus}</td>
+            <td>${timeAgo(p.createdAt)}</td>
+          </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch { /* handled by fetchAPI */ }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOverview);
+  </script>
+</body>
+</html>

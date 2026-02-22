@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standalone Verifier - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .verifier-intro { color: #aaa; font-size: 0.95rem; max-width: 700px; margin-bottom: 24px; }
+    .upload-area {
+      border: 2px dashed #333;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 24px;
+    }
+    .upload-area:hover, .upload-area.dragover { border-color: #1a73e8; }
+    .upload-area p { color: #888; }
+    .upload-area input { display: none; }
+    .or-divider { text-align: center; color: #555; margin: 16px 0; font-size: 0.85rem; }
+    #json-input {
+      width: 100%;
+      min-height: 200px;
+      background: #141414;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px;
+      color: #e0e0e0;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      resize: vertical;
+    }
+    #json-input::placeholder { color: #555; }
+    #json-input:focus { outline: none; border-color: #1a73e8; }
+    .verify-btn {
+      margin-top: 16px;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 32px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .verify-btn:hover { background: #1557b0; }
+    .verify-btn:disabled { opacity: 0.5; cursor: default; }
+    #results { margin-top: 32px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .check-icon { font-size: 1.2rem; flex-shrink: 0; width: 24px; text-align: center; }
+    .check-pass { color: #8bc34a; }
+    .check-fail { color: #f44336; }
+    .check-skip { color: #ff9800; }
+    .check-spin { color: #1a73e8; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .check-label { font-weight: 600; color: #fff; font-size: 0.9rem; }
+    .check-detail { color: #888; font-size: 0.8rem; margin-top: 2px; word-break: break-all; }
+    .check-detail code { color: #8bc34a; font-size: 0.78rem; }
+    .payload-toggle {
+      background: none;
+      border: 1px solid #333;
+      color: #1a73e8;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .payload-toggle:hover { border-color: #1a73e8; }
+    .payload-box {
+      display: none;
+      margin-top: 12px;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 6px;
+      padding: 16px;
+      max-height: 300px;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .summary-card {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+    .summary-pass { border-color: #8bc34a; }
+    .summary-fail { border-color: #f44336; }
+    .summary-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h1><img src="/logo.svg" alt="" width="36" height="36" style="vertical-align: middle; margin-right: 0.5rem;">IOProof</h1>
+        <a href="/" style="color:#1a73e8;text-decoration:none;font-size:0.9rem;">Home</a>
+      </div>
+      <p class="tagline">Standalone Proof Verifier</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <p class="verifier-intro">Verify any IOProof export bundle entirely in your browser. This page re-computes all SHA-256 hashes, walks the Merkle proof, and checks the Solana transaction — no server required. Works with exports from any IOProof instance.</p>
+
+    <div class="upload-area" id="upload-area">
+      <p>Drop an IOProof export JSON file here, or click to browse</p>
+      <input type="file" id="file-input" accept=".json">
+    </div>
+
+    <div class="or-divider">or paste the JSON below</div>
+
+    <textarea id="json-input" placeholder='Paste the contents of your ioproof-*.json export file here...'></textarea>
+
+    <button class="verify-btn" id="verify-btn">Verify Proof</button>
+
+    <div id="results"></div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>IOProof by <a href="https://alexiuz.com">Alexiuz AS</a> &middot; <a href="https://github.com/alekblom/ioproof" target="_blank" rel="noopener">Open Source (MIT)</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const jsonInput = document.getElementById('json-input');
+    const verifyBtn = document.getElementById('verify-btn');
+    const results = document.getElementById('results');
+
+    // File upload handling
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) readFile(file);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) readFile(fileInput.files[0]);
+    });
+
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        jsonInput.value = e.target.result;
+        uploadArea.querySelector('p').textContent = 'Loaded: ' + file.name;
+      };
+      reader.readAsText(file);
+    }
+
+    // SHA-256 in browser
+    async function sha256(data) {
+      let buffer;
+      if (typeof data === 'string') {
+        buffer = new TextEncoder().encode(data);
+      } else {
+        buffer = data;
+      }
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Merkle proof verification
+    async function verifyMerkle(leafHash, proof, expectedRoot) {
+      let current = leafHash;
+      for (const step of proof) {
+        let combined;
+        if (step.position === 'left') {
+          combined = step.hash + current;
+        } else {
+          combined = current + step.hash;
+        }
+        current = await sha256(combined);
+      }
+      return current === expectedRoot;
+    }
+
+    function esc(text) {
+      if (!text) return '';
+      const d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    function addCheck(container, id) {
+      const div = document.createElement('div');
+      div.className = 'check-item';
+      div.id = 'check-' + id;
+      div.innerHTML = '<div class="check-icon check-spin">&#9696;</div><div><div class="check-label">Checking...</div></div>';
+      container.appendChild(div);
+      return div;
+    }
+
+    function setCheck(el, pass, label, detail) {
+      const icon = pass === true ? '&#10003;' : pass === false ? '&#10007;' : '&#9888;';
+      const cls = pass === true ? 'check-pass' : pass === false ? 'check-fail' : 'check-skip';
+      el.innerHTML = '<div class="check-icon ' + cls + '">' + icon + '</div><div><div class="check-label">' + esc(label) + '</div>' + (detail ? '<div class="check-detail">' + detail + '</div>' : '') + '</div>';
+    }
+
+    verifyBtn.addEventListener('click', async () => {
+      const raw = jsonInput.value.trim();
+      if (!raw) return;
+
+      results.innerHTML = '';
+      verifyBtn.disabled = true;
+
+      let bundle;
+      try {
+        bundle = JSON.parse(raw);
+      } catch (e) {
+        results.innerHTML = '<p style="color:#f44336;">Invalid JSON: ' + esc(e.message) + '</p>';
+        verifyBtn.disabled = false;
+        return;
+      }
+
+      if (!bundle.proof || !bundle.merkle || !bundle.solana) {
+        results.innerHTML = '<p style="color:#f44336;">This doesn\'t look like an IOProof export bundle. Expected proof, merkle, and solana fields.</p>';
+        verifyBtn.disabled = false;
+        return;
+      }
+
+      const checksDiv = document.createElement('div');
+      results.appendChild(checksDiv);
+
+      let allPass = true;
+
+      // Step 1: Verify request hash
+      const c1 = addCheck(checksDiv, 'req');
+      if (bundle.payloads && bundle.payloads.request) {
+        const computed = await sha256(bundle.payloads.request);
+        const match = computed === bundle.proof.request_hash;
+        if (!match) allPass = false;
+        setCheck(c1, match, 'Request hash',
+          match ? 'SHA-256 of request body matches <code>' + esc(bundle.proof.request_hash) + '</code>'
+                : 'Mismatch! Computed <code>' + esc(computed) + '</code> but expected <code>' + esc(bundle.proof.request_hash) + '</code>');
+      } else {
+        setCheck(c1, null, 'Request hash (no payload)', 'Payload not included in bundle — cannot re-hash');
+      }
+
+      // Step 2: Verify response hash
+      const c2 = addCheck(checksDiv, 'res');
+      if (bundle.payloads && bundle.payloads.response) {
+        const computed = await sha256(bundle.payloads.response);
+        const match = computed === bundle.proof.response_hash;
+        if (!match) allPass = false;
+        setCheck(c2, match, 'Response hash',
+          match ? 'SHA-256 of response body matches <code>' + esc(bundle.proof.response_hash) + '</code>'
+                : 'Mismatch! Computed <code>' + esc(computed) + '</code> but expected <code>' + esc(bundle.proof.response_hash) + '</code>');
+      } else {
+        setCheck(c2, null, 'Response hash (no payload)', 'Payload not included in bundle — cannot re-hash');
+      }
+
+      // Step 3: Verify combined hash
+      const c3 = addCheck(checksDiv, 'combined');
+      const combinedInput = bundle.proof.request_hash + '|' + bundle.proof.response_hash + '|' + bundle.proof.timestamp;
+      const computedCombined = await sha256(combinedInput);
+      const combinedMatch = computedCombined === bundle.proof.combined_hash;
+      if (!combinedMatch) allPass = false;
+      setCheck(c3, combinedMatch, 'Combined hash',
+        combinedMatch ? 'SHA-256(request_hash|response_hash|timestamp) = <code>' + esc(bundle.proof.combined_hash) + '</code>'
+                      : 'Mismatch! Got <code>' + esc(computedCombined) + '</code>');
+
+      // Step 4: Verify blinding
+      const c4 = addCheck(checksDiv, 'blind');
+      const blindInput = bundle.proof.combined_hash + '|' + bundle.proof.secret;
+      const computedBlinded = await sha256(blindInput);
+      const blindMatch = computedBlinded === bundle.proof.blinded_hash;
+      if (!blindMatch) allPass = false;
+      setCheck(c4, blindMatch, 'Blinded hash',
+        blindMatch ? 'SHA-256(combined_hash|secret) = <code>' + esc(bundle.proof.blinded_hash) + '</code>'
+                   : 'Mismatch! Got <code>' + esc(computedBlinded) + '</code>');
+
+      // Step 5: Verify Merkle proof
+      const c5 = addCheck(checksDiv, 'merkle');
+      if (bundle.merkle.proof && bundle.merkle.root) {
+        const merkleValid = await verifyMerkle(bundle.proof.blinded_hash, bundle.merkle.proof, bundle.merkle.root);
+        if (!merkleValid) allPass = false;
+        setCheck(c5, merkleValid, 'Merkle proof (' + bundle.merkle.proof.length + ' levels)',
+          merkleValid ? 'Blinded hash walks to root <code>' + esc(bundle.merkle.root) + '</code>'
+                      : 'Merkle path does not lead to the claimed root');
+      } else {
+        setCheck(c5, null, 'Merkle proof (not yet batched)', 'Bundle was exported before batch processing');
+      }
+
+      // Step 6: Check Solana transaction
+      const c6 = addCheck(checksDiv, 'solana');
+      if (bundle.solana.signature) {
+        try {
+          const cluster = bundle.solana.cluster || 'devnet';
+          const rpcUrl = cluster === 'mainnet-beta' ? 'https://api.mainnet-beta.solana.com'
+                       : cluster === 'testnet' ? 'https://api.testnet.solana.com'
+                       : 'https://api.devnet.solana.com';
+
+          const rpcRes = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getTransaction',
+              params: [bundle.solana.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
+            }),
+          });
+          const rpcData = await rpcRes.json();
+
+          if (rpcData.result) {
+            // Find memo instruction
+            const logs = rpcData.result.meta?.logMessages || [];
+            const memoLog = logs.find(l => l.includes('ioproof|batch|'));
+            if (memoLog) {
+              const memoData = memoLog.replace(/^.*Program log: Memo \(len \d+\): /, '').replace(/^.*"/, '').replace(/".*$/, '');
+              const parts = memoData.split('|');
+              // Format: ioproof|batch|{batchId}|{merkleRoot}|{proofCount}|{timestamp}
+              const onChainRoot = parts[3];
+              const rootMatch = onChainRoot === bundle.merkle.root;
+              if (!rootMatch) allPass = false;
+              setCheck(c6, rootMatch, 'Solana on-chain verification',
+                rootMatch ? 'Merkle root in Solana memo matches: <code>' + esc(onChainRoot) + '</code><br><a href="' + esc(bundle.solana.explorer_url) + '" target="_blank" rel="noopener" style="color:#1a73e8;">View on Solana Explorer</a>'
+                          : 'Root mismatch! On-chain: <code>' + esc(onChainRoot) + '</code> vs bundle: <code>' + esc(bundle.merkle.root) + '</code>');
+            } else {
+              // Try parsing memo from instructions
+              setCheck(c6, null, 'Solana transaction found', 'Transaction exists but memo format could not be parsed automatically. <a href="' + esc(bundle.solana.explorer_url) + '" target="_blank" rel="noopener" style="color:#1a73e8;">Verify manually on Explorer</a>');
+            }
+          } else {
+            setCheck(c6, null, 'Solana transaction not found', 'Transaction <code>' + esc(bundle.solana.signature) + '</code> not found on ' + esc(cluster) + '. It may have been pruned or the cluster may be wrong.');
+          }
+        } catch (err) {
+          setCheck(c6, null, 'Solana RPC error', 'Could not connect to Solana RPC: ' + esc(err.message) + '. <a href="' + esc(bundle.solana.explorer_url) + '" target="_blank" rel="noopener" style="color:#1a73e8;">Check manually</a>');
+        }
+      } else {
+        setCheck(c6, null, 'No Solana signature', 'Bundle does not include a Solana transaction signature');
+      }
+
+      // Summary
+      const summary = document.createElement('div');
+      summary.className = 'summary-card ' + (allPass ? 'summary-pass' : 'summary-fail');
+      summary.innerHTML = '<div class="summary-title" style="color:' + (allPass ? '#8bc34a' : '#f44336') + ';">' +
+        (allPass ? 'All checks passed' : 'Some checks failed') + '</div>' +
+        '<p style="color:#aaa;font-size:0.85rem;">Provider: <strong>' + esc(bundle.proof.provider) + '</strong> &middot; ' +
+        'Target: <strong>' + esc(bundle.proof.target_url || 'N/A') + '</strong> &middot; ' +
+        'Time: <strong>' + esc(bundle.proof.timestamp) + '</strong></p>';
+
+      // Payload viewer
+      if (bundle.payloads) {
+        let payloadHtml = '<div style="margin-top:16px;">';
+        if (bundle.payloads.request) {
+          payloadHtml += '<button class="payload-toggle" onclick="togglePayload(\'sv-req\')">Show Request</button>';
+          payloadHtml += '<div class="payload-box" id="sv-req">' + formatJsonSafe(bundle.payloads.request) + '</div>';
+        }
+        if (bundle.payloads.response) {
+          payloadHtml += '<button class="payload-toggle" onclick="togglePayload(\'sv-res\')">Show Response</button>';
+          payloadHtml += '<div class="payload-box" id="sv-res">' + formatJsonSafe(bundle.payloads.response) + '</div>';
+        }
+        payloadHtml += '</div>';
+        summary.innerHTML += payloadHtml;
+      }
+
+      results.appendChild(summary);
+      verifyBtn.disabled = false;
+    });
+
+    function togglePayload(id) {
+      const el = document.getElementById(id);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function formatJsonSafe(raw) {
+      try {
+        return esc(JSON.stringify(JSON.parse(raw), null, 2));
+      } catch { return esc(raw); }
+    }
+
+    function esc(text) {
+      if (!text) return '';
+      var d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>

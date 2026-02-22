@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activate Account - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .activate-page { max-width: 400px; margin: 0 auto; padding: 80px 20px; text-align: center; }
+    .activate-card { background: #141414; border: 1px solid #222; border-radius: 8px; padding: 32px; }
+    .activate-status { font-size: 1.1rem; margin-bottom: 16px; }
+    .activate-link { margin-top: 16px; }
+    .activate-link a { color: #1a73e8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href="/" style="color:#fff;text-decoration:none;"><img src="/logo.svg" alt="" width="36" height="36" style="vertical-align:middle;margin-right:0.5rem;">IOProof</a></h1>
+    </div>
+  </header>
+
+  <div class="activate-page">
+    <div class="activate-card">
+      <div class="activate-status" id="status">Activating your account...</div>
+      <div class="activate-link" id="link" style="display:none;">
+        <a href="/login">Go to login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      const email = params.get('email');
+      const hash = params.get('hash');
+      const statusEl = document.getElementById('status');
+      const linkEl = document.getElementById('link');
+
+      if (!email || !hash) {
+        statusEl.textContent = 'Invalid activation link.';
+        statusEl.style.color = '#e74c3c';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/auth/activate?email=${encodeURIComponent(email)}&hash=${encodeURIComponent(hash)}`);
+        const data = await res.json();
+        if (res.ok) {
+          statusEl.textContent = data.message;
+          statusEl.style.color = '#8bc34a';
+          linkEl.style.display = 'block';
+          setTimeout(() => window.location.href = '/login?activated=true', 2000);
+        } else {
+          statusEl.textContent = data.error?.message || 'Activation failed.';
+          statusEl.style.color = '#e74c3c';
+        }
+      } catch {
+        statusEl.textContent = 'Network error. Please try again.';
+        statusEl.style.color = '#e74c3c';
+      }
+    })();
+  </script>
+</body>
+</html>

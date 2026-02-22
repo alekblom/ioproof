@@ -1,0 +1,27 @@
+{
+  "name": "@ioproof/core",
+  "version": "0.1.0",
+  "description": "Core verification utilities for IOProof — SHA-256 hashing, Merkle proof validation, and blinded commitment verification",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [
+    "ioproof",
+    "verification",
+    "sha256",
+    "merkle",
+    "cryptographic",
+    "proof",
+    "zero-knowledge"
+  ],
+  "author": "Alexiuz AS",
+  "license": "MIT",
+  "homepage": "https://ioproof.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alekblom/ioproof.git",
+    "directory": "packages/npm/core"
+  },
+  "bugs": {
+    "url": "https://github.com/alekblom/ioproof/issues"
+  }
+}

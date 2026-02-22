@@ -10,7 +10,13 @@
 <body>
   <header>
     <div class="container">
-      <h1><img src="/logo.svg" alt="" width="36" height="36" style="vertical-align: middle; margin-right: 0.5rem;">IOProof</h1>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h1><img src="/logo.svg" alt="" width="36" height="36" style="vertical-align: middle; margin-right: 0.5rem;">IOProof</h1>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <a href="/dashboard" style="color:#1a73e8;text-decoration:none;font-size:0.9rem;font-weight:600;">Dashboard</a>
+          <a href="https://github.com/alekblom/ioproof" style="color:#888;text-decoration:none;font-size:0.85rem;" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
       <p class="tagline">Cryptographic proof that an AI said what it said.</p>
     </div>
   </header>
@@ -19,8 +25,8 @@
     <!-- Landing content (hidden when verifying) -->
     <div id="landing">
       <section class="hero">
-        <h2>Merkle-batched on-chain attestation for AI interactions</h2>
-        <p>IOProof is a proxy that sits between you and your AI provider. It hashes every request and response, batches proofs into a Merkle tree, and commits the root to Solana. One transaction proves thousands of interactions.</p>
+        <h2>Tamper-evident AI attestation with zero-knowledge privacy</h2>
+        <p>IOProof is an open-source proxy that sits between you and any AI provider. It captures the exact request and response, generates a blinded proof using a unique secret, batches proofs into a Merkle tree, and commits the root to Solana. One transaction proves thousands of interactions — without exposing any data on-chain.</p>
       </section>
 
       <section class="how-it-works">
@@ -29,22 +35,50 @@
           <div class="step">
             <span class="step-num">1</span>
             <strong>Send your request</strong>
-            <p>Call our proxy instead of the AI API directly. We support OpenAI, Anthropic, xAI, and Gemini.</p>
+            <p>Call our proxy instead of the AI API directly. We support OpenAI, Anthropic, xAI, Gemini, and any custom HTTP API.</p>
           </div>
           <div class="step">
             <span class="step-num">2</span>
-            <strong>We hash everything</strong>
-            <p>SHA-256 hash of the exact request bytes and the exact response bytes. Deterministic and verifiable.</p>
+            <strong>We hash &amp; blind</strong>
+            <p>SHA-256 hashes of the exact request and response bytes, combined with a random secret to produce a blinded hash. Only you get the secret.</p>
           </div>
           <div class="step">
             <span class="step-num">3</span>
-            <strong>Merkle batching</strong>
-            <p>Proofs are collected and batched into a Merkle tree. One Solana transaction commits the root, covering all proofs in the batch.</p>
+            <strong>Full audit stored</strong>
+            <p>The complete request body, target URL, and response body are stored server-side. Only accessible with your secret for full privacy control.</p>
           </div>
           <div class="step">
             <span class="step-num">4</span>
-            <strong>Verify any proof</strong>
-            <p>Each proof includes a Merkle path back to the on-chain root. Verify independently without trusting us.</p>
+            <strong>Merkle batching</strong>
+            <p>Blinded proofs are collected hourly and batched into a Merkle tree. One Solana transaction commits the root for all proofs in the batch.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">5</span>
+            <strong>Verify or export</strong>
+            <p>Verify any proof with your secret — or export a self-contained bundle for independent verification against Solana, no trust in IOProof required.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="privacy-model" style="margin-top:2rem;">
+        <h3>Zero-knowledge privacy</h3>
+        <p style="color:#aaa;max-width:700px;">Each proof is blinded with a unique 256-bit secret before being included in the Merkle tree. On-chain, observers see only a Merkle root — they cannot determine how many proofs exist, what providers were used, or any content. Your secret is your key to proving ownership of a specific interaction, and you choose who to share it with.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;max-width:700px;">
+          <div style="padding:16px;background:#111;border-radius:8px;border:1px solid #222;">
+            <strong style="color:#fff;font-size:0.85rem;">On-chain (public)</strong>
+            <ul style="color:#888;font-size:0.85rem;list-style:none;padding:0;margin:8px 0 0;">
+              <li>Merkle root (single hash)</li>
+              <li>Batch metadata</li>
+              <li>Solana tx signature</li>
+            </ul>
+          </div>
+          <div style="padding:16px;background:#111;border-radius:8px;border:1px solid #222;">
+            <strong style="color:#fff;font-size:0.85rem;">On IOProof (secret-gated)</strong>
+            <ul style="color:#888;font-size:0.85rem;list-style:none;padding:0;margin:8px 0 0;">
+              <li>Full request/response</li>
+              <li>Target URL, provider</li>
+              <li>Individual proof hashes</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -56,6 +90,23 @@
           <span class="provider">Anthropic</span>
           <span class="provider">xAI</span>
           <span class="provider">Google Gemini</span>
+          <span class="provider">+ any HTTP API</span>
+        </div>
+      </section>
+
+      <section class="pricing" style="margin-top:2rem;">
+        <h3>Pricing</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:500px;">
+          <div style="padding:20px;background:#111;border-radius:8px;border:1px solid #222;">
+            <strong style="color:#fff;">Free</strong>
+            <p style="color:#aaa;font-size:0.85rem;margin:8px 0;">100 proofs/month<br>Full dashboard<br>API key access</p>
+            <a href="/register" style="color:#1a73e8;font-size:0.85rem;">Get started</a>
+          </div>
+          <div style="padding:20px;background:#111;border-radius:8px;border:1px solid #1a73e8;">
+            <strong style="color:#fff;">Self-hosted</strong>
+            <p style="color:#aaa;font-size:0.85rem;margin:8px 0;">Unlimited proofs<br>Your own Solana keys<br>MIT licensed</p>
+            <a href="https://github.com/alekblom/ioproof" style="color:#1a73e8;font-size:0.85rem;" target="_blank" rel="noopener">View on GitHub</a>
+          </div>
         </div>
       </section>
 
@@ -63,20 +114,23 @@
         <h3>Quick start</h3>
         <pre><code>curl -X POST https://ioproof.com/v1/proxy/openai/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "X-IOProof-Key: iop_live_your_key_here" \
   -H "X-Provider-Key: sk-your-openai-key" \
   -d '{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Hello"}]
   }'</code></pre>
+        <p style="color:#888;font-size:0.85rem;margin-top:8px;">The response wraps the provider's original response with a verification receipt including your unique secret.</p>
       </section>
 
       <section class="verify-search">
         <h3>Verify a proof</h3>
-        <p>Paste any hash (request, response, or combined) to look up its on-chain attestation.</p>
+        <p>Paste a combined hash to look up its on-chain attestation. Include your secret for full details.</p>
         <form id="verify-form">
           <input type="text" id="hash-input" placeholder="Enter a 64-character SHA-256 hash" maxlength="64" pattern="[a-f0-9]{64}">
           <button type="submit">Verify</button>
         </form>
+        <p style="color:#888;font-size:0.85rem;margin-top:12px;">Have an exported proof bundle? Use the <a href="/standalone-verifier" style="color:#1a73e8;">standalone verifier</a> to verify it entirely client-side — no trust in IOProof required.</p>
       </section>
     </div>
 
@@ -90,7 +144,7 @@
 
   <footer>
     <div class="container">
-      <p>IOProof by <a href="https://alexiuz.com">Alexiuz AS</a></p>
+      <p>IOProof by <a href="https://alexiuz.com">Alexiuz AS</a> &middot; <a href="https://github.com/alekblom/ioproof" target="_blank" rel="noopener">Open Source (MIT)</a></p>
     </div>
   </footer>
 

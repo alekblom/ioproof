@@ -1,0 +1,91 @@
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const USERS_PATH = path.join(DATA_DIR, 'users.json');
+
+function loadUsers() {
+  if (!fs.existsSync(USERS_PATH)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(USERS_PATH, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(USERS_PATH, JSON.stringify(users, null, 2));
+}
+
+function generateUserId() {
+  const ts = Date.now().toString(36);
+  const rand = crypto.randomBytes(4).toString('hex');
+  return `usr_${ts}_${rand}`;
+}
+
+function findUserByEmail(email) {
+  return loadUsers().find((u) => u.email === email.toLowerCase()) || null;
+}
+
+function findUserById(id) {
+  return loadUsers().find((u) => u.id === id) || null;
+}
+
+function findUserBySession(sessionHash, ip) {
+  if (!sessionHash) return null;
+  return loadUsers().find(
+    (u) => u.sessionHash === sessionHash && u.sessionIp === ip && u.status === 1
+  ) || null;
+}
+
+async function insertUser({ email, password }) {
+  const users = loadUsers();
+  const passwordHash = await bcrypt.hash(password, 10);
+  const activationHash = crypto.randomBytes(32).toString('hex');
+
+  const user = {
+    id: generateUserId(),
+    email: email.toLowerCase(),
+    passwordHash,
+    status: 0,
+    tier: 'free',
+    activationHash,
+    sessionHash: null,
+    sessionIp: null,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null,
+  };
+
+  users.push(user);
+  saveUsers(users);
+  return user;
+}
+
+function updateUser(id, fields) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx === -1) return null;
+  Object.assign(users[idx], fields);
+  saveUsers(users);
+  return users[idx];
+}
+
+async function verifyPassword(user, password) {
+  return bcrypt.compare(password, user.passwordHash);
+}
+
+function generateSessionHash() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+module.exports = {
+  findUserByEmail,
+  findUserById,
+  findUserBySession,
+  insertUser,
+  updateUser,
+  verifyPassword,
+  generateSessionHash,
+};

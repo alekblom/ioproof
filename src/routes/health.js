@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { SolanaAttestor } = require('../attestation/solana');
+const { getProviderNames } = require('../providers');
 const config = require('../config');
 const router = Router();
 
@@ -9,7 +10,7 @@ router.get('/', async (req, res) => {
   const health = {
     status: 'ok',
     service: 'ioproof',
-    providers: ['openai', 'anthropic', 'xai', 'gemini'],
+    providers: getProviderNames(),
     batch_interval_ms: config.batch.intervalMs,
     solana_configured: attestor.isConfigured(),
   };

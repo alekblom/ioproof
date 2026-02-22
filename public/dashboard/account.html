@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <h2>Account</h2>
+
+      <div id="msg"></div>
+
+      <div class="form-section">
+        <h3>Plan</h3>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span class="tier-badge" id="tier-badge">Free</span>
+          <span style="color:#888;font-size:0.85rem;" id="tier-desc">100 proofs per month</span>
+          <button class="btn-primary btn-disabled" style="margin-left:auto;">Upgrade (Coming Soon)</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Email</h3>
+        <form id="email-form">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="new-email" required>
+          </div>
+          <button type="submit" class="btn-primary">Update Email</button>
+        </form>
+      </div>
+
+      <div class="form-section">
+        <h3>Password</h3>
+        <form id="password-form">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input type="password" id="current-password" required autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="new-password" required minlength="12" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="confirm-password" required minlength="12" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn-primary">Change Password</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script>
+    function showMsg(text, type) {
+      const el = document.getElementById('msg');
+      el.className = type === 'error' ? 'alert-error' : 'alert-success';
+      el.textContent = text;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    async function loadAccount() {
+      try {
+        const res = await fetchAPI('/auth/me');
+        const user = await res.json();
+        document.getElementById('new-email').value = user.email;
+        document.getElementById('tier-badge').textContent = user.tier.charAt(0).toUpperCase() + user.tier.slice(1);
+      } catch { /* handled by fetchAPI */ }
+    }
+
+    document.getElementById('email-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('new-email').value;
+      try {
+        const res = await fetchAPI('/api/dashboard/account', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg('Email updated.', 'success');
+          loadDashboardHeader();
+        } else {
+          showMsg(data.error?.message || 'Update failed.', 'error');
+        }
+      } catch {
+        showMsg('Network error.', 'error');
+      }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      if (newPassword !== confirmPassword) {
+        showMsg('Passwords do not match.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetchAPI('/api/dashboard/account', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg('Password changed.', 'success');
+          document.getElementById('password-form').reset();
+        } else {
+          showMsg(data.error?.message || 'Update failed.', 'error');
+        }
+      } catch {
+        showMsg('Network error.', 'error');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadAccount);
+  </script>
+</body>
+</html>

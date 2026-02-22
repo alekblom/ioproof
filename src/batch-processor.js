@@ -22,7 +22,8 @@ async function processBatch() {
   }
 
   const batchId = generateBatchId();
-  const leaves = pending.map((p) => p.combinedHash);
+  // Use blinded hashes as Merkle leaves — raw data never appears on-chain
+  const leaves = pending.map((p) => p.blindedHash);
   const { root, layers } = buildMerkleTree(leaves);
 
   if (!root) return;
@@ -47,14 +48,15 @@ async function processBatch() {
     console.warn('[BATCH] No Solana keypair — batch stored locally only');
   }
 
-  // Build individual Merkle proofs for each leaf
+  // Build individual Merkle proofs for each leaf (keyed by blindedHash)
   const proofMap = {};
   for (let i = 0; i < leaves.length; i++) {
     proofMap[leaves[i]] = getMerkleProof(layers, i);
   }
 
-  // Update all proofs in this batch
-  updateProofsBatch(leaves, {
+  // Update all proofs in this batch (match by blindedHash)
+  const blindedHashes = pending.map((p) => p.blindedHash);
+  updateProofsBatch(blindedHashes, {
     batchId,
     merkleRoot: root,
     proofs: proofMap,

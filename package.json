@@ -1,15 +1,20 @@
 {
   "name": "ioproof",
   "version": "1.0.0",
-  "private": true,
-  "description": "Cryptographic attestation layer for AI interactions with Merkle-batched Solana proofs",
+  "description": "Cryptographic attestation proxy for AI interactions — Merkle-batched proofs on Solana with zero-knowledge privacy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alekblom/ioproof.git"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
-    "express": "^4.21.0",
+    "@solana/web3.js": "^1.95.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.4.0",
-    "@solana/web3.js": "^1.95.0"
+    "express": "^4.21.0"
   }
 }

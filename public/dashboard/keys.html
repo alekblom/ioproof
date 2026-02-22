@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Keys - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2 style="margin-bottom:0;">API Keys</h2>
+        <button class="btn-primary" id="create-key-btn">Create New Key</button>
+      </div>
+
+      <div id="create-form" style="display:none;" class="form-section">
+        <div class="form-group">
+          <label>Key Name</label>
+          <input type="text" id="key-name" placeholder="e.g. Production, Testing" maxlength="50">
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="btn-primary" id="generate-btn">Generate</button>
+          <button class="btn-primary" id="cancel-btn" style="background:#333;">Cancel</button>
+        </div>
+      </div>
+
+      <div id="keys-list"></div>
+
+      <div style="margin-top:24px;padding:16px;background:#141414;border:1px solid #222;border-radius:8px;">
+        <p style="color:#888;font-size:0.85rem;margin:0;">
+          Use your API key in the <code style="color:#8bc34a;">X-IOProof-Key</code> header or as <code style="color:#8bc34a;">Authorization: Bearer iop_live_...</code> when calling the proxy API.
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script>
+    async function loadKeys() {
+      try {
+        const res = await fetchAPI('/api/dashboard/keys');
+        const data = await res.json();
+        const container = document.getElementById('keys-list');
+
+        if (data.keys.length === 0) {
+          container.innerHTML = '<div class="empty-state">No API keys yet. Create one to start using the proxy API.</div>';
+          return;
+        }
+
+        let html = '<table class="dash-table"><thead><tr><th>Name</th><th>Key Prefix</th><th>Created</th><th>Last Used</th><th>Status</th><th></th></tr></thead><tbody>';
+        for (const k of data.keys) {
+          const status = k.revoked
+            ? '<span style="color:#e74c3c;">Revoked</span>'
+            : '<span class="status-confirmed">Active</span>';
+          const revokeBtn = k.revoked
+            ? ''
+            : `<button class="btn-danger" onclick="revokeKey('${k.id}')">Revoke</button>`;
+          html += `<tr>
+            <td>${k.name}</td>
+            <td class="mono">${k.prefix}...</td>
+            <td>${timeAgo(k.createdAt)}</td>
+            <td>${timeAgo(k.lastUsedAt)}</td>
+            <td>${status}</td>
+            <td>${revokeBtn}</td>
+          </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch { /* handled by fetchAPI */ }
+    }
+
+    async function revokeKey(keyId) {
+      if (!confirm('Revoke this API key? This cannot be undone.')) return;
+      await fetchAPI(`/api/dashboard/keys/${keyId}`, { method: 'DELETE' });
+      loadKeys();
+    }
+
+    document.getElementById('create-key-btn').addEventListener('click', () => {
+      document.getElementById('create-form').style.display = 'block';
+      document.getElementById('key-name').focus();
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      document.getElementById('create-form').style.display = 'none';
+    });
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const name = document.getElementById('key-name').value || 'Default';
+      try {
+        const res = await fetchAPI('/api/dashboard/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('create-form').style.display = 'none';
+          document.getElementById('key-name').value = '';
+          showKeyModal(data.key.fullKey);
+        } else {
+          alert(data.error?.message || 'Failed to create key.');
+        }
+      } catch { /* handled by fetchAPI */ }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadKeys);
+  </script>
+</body>
+</html>

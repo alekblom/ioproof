@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usage - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <h2>Usage</h2>
+
+      <div class="form-section">
+        <h3>Current Month</h3>
+        <div id="current-usage"></div>
+      </div>
+
+      <div class="form-section">
+        <h3>History</h3>
+        <div id="usage-history"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script>
+    async function loadUsage() {
+      try {
+        const res = await fetchAPI('/api/dashboard/usage');
+        const data = await res.json();
+
+        // Current month meter
+        renderUsageMeter(document.getElementById('current-usage'), data.current.used, data.current.limit);
+
+        // History
+        const container = document.getElementById('usage-history');
+        if (data.history.length === 0) {
+          container.innerHTML = '<div class="empty-state">No usage history yet.</div>';
+          return;
+        }
+
+        let html = '<table class="dash-table"><thead><tr><th>Month</th><th>Proofs</th><th></th></tr></thead><tbody>';
+        for (const h of data.history) {
+          const pct = data.current.limit > 0 ? Math.round((h.proofCount / data.current.limit) * 100) : 0;
+          html += `<tr>
+            <td>${h.month}</td>
+            <td>${h.proofCount}</td>
+            <td>
+              <div class="meter-bar" style="width:200px;display:inline-block;vertical-align:middle;">
+                <div class="meter-fill" style="width:${Math.min(100, pct)}%"></div>
+              </div>
+              <span style="color:#888;font-size:0.8rem;margin-left:8px;">${pct}%</span>
+            </td>
+          </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch { /* handled by fetchAPI */ }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadUsage);
+  </script>
+</body>
+</html>
