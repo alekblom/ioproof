@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IOProof - Cryptographic Attestation for AI Interactions</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><img src="/logo.svg" alt="" width="36" height="36" style="vertical-align: middle; margin-right: 0.5rem;">IOProof</h1>
+      <p class="tagline">Cryptographic proof that an AI said what it said.</p>
+    </div>
+  </header>
+
+  <main class="container" id="app">
+    <!-- Landing content (hidden when verifying) -->
+    <div id="landing">
+      <section class="hero">
+        <h2>Merkle-batched on-chain attestation for AI interactions</h2>
+        <p>IOProof is a proxy that sits between you and your AI provider. It hashes every request and response, batches proofs into a Merkle tree, and commits the root to Solana. One transaction proves thousands of interactions.</p>
+      </section>
+
+      <section class="how-it-works">
+        <h3>How it works</h3>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <strong>Send your request</strong>
+            <p>Call our proxy instead of the AI API directly. We support OpenAI, Anthropic, xAI, and Gemini.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <strong>We hash everything</strong>
+            <p>SHA-256 hash of the exact request bytes and the exact response bytes. Deterministic and verifiable.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <strong>Merkle batching</strong>
+            <p>Proofs are collected and batched into a Merkle tree. One Solana transaction commits the root, covering all proofs in the batch.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">4</span>
+            <strong>Verify any proof</strong>
+            <p>Each proof includes a Merkle path back to the on-chain root. Verify independently without trusting us.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="providers">
+        <h3>Supported providers</h3>
+        <div class="provider-list">
+          <span class="provider">OpenAI</span>
+          <span class="provider">Anthropic</span>
+          <span class="provider">xAI</span>
+          <span class="provider">Google Gemini</span>
+        </div>
+      </section>
+
+      <section class="usage">
+        <h3>Quick start</h3>
+        <pre><code>curl -X POST https://ioproof.com/v1/proxy/openai/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Provider-Key: sk-your-openai-key" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'</code></pre>
+      </section>
+
+      <section class="verify-search">
+        <h3>Verify a proof</h3>
+        <p>Paste any hash (request, response, or combined) to look up its on-chain attestation.</p>
+        <form id="verify-form">
+          <input type="text" id="hash-input" placeholder="Enter a 64-character SHA-256 hash" maxlength="64" pattern="[a-f0-9]{64}">
+          <button type="submit">Verify</button>
+        </form>
+      </section>
+    </div>
+
+    <!-- Verify result (shown when looking up a proof) -->
+    <div id="verify-result" style="display: none;">
+      <a href="/" class="back-link">Back to home</a>
+      <h2>Verification Result</h2>
+      <div id="verify-content"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>IOProof by <a href="https://alexiuz.com">Alexiuz AS</a></p>
+    </div>
+  </footer>
+
+  <script src="/verify.js"></script>
+</body>
+</html>

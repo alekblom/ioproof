@@ -1,0 +1,15 @@
+{
+  "name": "ioproof",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cryptographic attestation layer for AI interactions with Merkle-batched Solana proofs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "dotenv": "^16.4.0",
+    "@solana/web3.js": "^1.95.0"
+  }
+}
