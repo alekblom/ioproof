@@ -287,6 +287,44 @@ button:hover {
   text-decoration: none;
 }
 
+.provider-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(52,168,83,0.1);
+  border: 1px solid rgba(52,168,83,0.3);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin: 12px 0;
+  color: #34a853;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.provider-verified-badge::before {
+  content: '\2713';
+  font-size: 1rem;
+}
+
+.provider-sig-failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(244,67,54,0.1);
+  border: 1px solid rgba(244,67,54,0.3);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin: 12px 0;
+  color: #f44336;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.provider-sig-failed::before {
+  content: '\2717';
+  font-size: 1rem;
+}
+
 footer {
   border-top: 1px solid #222;
   padding: 24px 0;

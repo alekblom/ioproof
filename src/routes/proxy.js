@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { getProvider } = require('../providers');
 const { sha256, buildCombinedHash, generateSecret, blindHash } = require('../attestation/hasher');
 const { buildReceipt } = require('../attestation/receipt');
+const { verifyProviderSignature } = require('../attestation/provider-signature');
 const { insertProof, storePayload } = require('../db');
 const { apiKeyAuth } = require('../middleware/apiKeyAuth');
 const { incrementUsage } = require('../auth/usage');
@@ -56,9 +57,30 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
       });
     }
 
-    // 4. Read raw response body
+    // 4. Read raw response body and capture provider headers
     const responseBuffer = Buffer.from(await providerRes.arrayBuffer());
     const responseHash = sha256(responseBuffer);
+
+    // 4a. Capture provider response headers
+    const providerHeaders = {};
+    for (const [k, v] of providerRes.headers) {
+      providerHeaders[k] = v;
+    }
+    const h = {};
+    for (const [k, v] of Object.entries(providerHeaders)) {
+      h[k.toLowerCase()] = v;
+    }
+    const providerRequestId = h['x-request-id'] || h['request-id'] || h['x-ds-trace-id'] || null;
+    const providerTimestamp = h['date'] || null;
+
+    // 4b. Verify provider signature if present
+    let providerSignature = null;
+    const sig = h['x-ioproof-sig'];
+    const sigTs = h['x-ioproof-sig-ts'];
+    const keyId = h['x-ioproof-key-id'];
+    if (sig && sigTs && keyId) {
+      providerSignature = await verifyProviderSignature(requestHash, responseHash, sig, sigTs, keyId, providerName);
+    }
 
     // 5. Build combined hash
     const combinedHash = buildCombinedHash(requestHash, responseHash, timestamp);
@@ -89,6 +111,10 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
       batchId: null,
       merkleRoot: null,
       merkleProof: null,
+      providerHeaders,
+      providerRequestId,
+      providerTimestamp,
+      providerSignature,
     });
 
     // Store raw payloads as separate files (can be large)
@@ -111,6 +137,9 @@ router.post('/:provider/*', apiKeyAuth, async (req, res, next) => {
       secret,
       userSecret,
       timestamp,
+      providerRequestId,
+      providerTimestamp,
+      providerSignature,
     });
 
     // 9. Parse provider response and return envelope

@@ -1,12 +1,15 @@
 const { Router } = require('express');
 const {
   findUserByEmail,
+  findUserByAlexiuzId,
   insertUser,
+  insertSsoUser,
   updateUser,
   verifyPassword,
   generateSessionHash,
   findUserBySession,
 } = require('../auth/users');
+const { consumeToken } = require('../auth/alexiuz-sso');
 const { sendVerificationEmail } = require('../auth/email');
 const config = require('../config');
 
@@ -192,6 +195,58 @@ router.get('/me', (req, res) => {
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
   });
+});
+
+// GET /auth/sso/callback?token=...
+router.get('/sso/callback', async (req, res) => {
+  try {
+    const { token } = req.query;
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
+
+    const ssoUser = await consumeToken(token, clientIp);
+    if (!ssoUser) {
+      return res.redirect('/login?error=invalid-token');
+    }
+
+    // Find or create local user
+    let user = findUserByAlexiuzId(ssoUser.alexiuzUserId);
+
+    if (!user) {
+      // Try by email
+      user = findUserByEmail(ssoUser.email);
+      if (user) {
+        // Link existing account to alexiuz
+        if (!user.alexiuzUserId) {
+          updateUser(user.id, { alexiuzUserId: ssoUser.alexiuzUserId });
+        }
+      } else {
+        // Create new SSO user
+        user = insertSsoUser({
+          email: ssoUser.email,
+          alexiuzUserId: ssoUser.alexiuzUserId,
+        });
+      }
+    }
+
+    // Create session
+    const sessionHash = generateSessionHash();
+    updateUser(user.id, {
+      sessionHash,
+      sessionIp: clientIp,
+      status: 1,
+      lastLoginAt: new Date().toISOString(),
+    });
+
+    res.setHeader('Set-Cookie',
+      `ioproof_session=${sessionHash}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 3600}` +
+      (config.nodeEnv === 'production' ? '; Secure' : '')
+    );
+
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error('[AUTH] SSO callback error:', err.message);
+    res.redirect('/login?error=sso-failed');
+  }
 });
 
 module.exports = router;

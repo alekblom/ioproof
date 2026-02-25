@@ -25,7 +25,7 @@
     <!-- Landing content (hidden when verifying) -->
     <div id="landing">
       <section class="hero">
-        <h2>Tamper-evident AI attestation with zero-knowledge privacy</h2>
+        <h2>Auditable AI attestation with zero-knowledge privacy</h2>
         <p>IOProof is an open-source proxy that sits between you and any AI provider. It captures the exact request and response, generates a blinded proof using a unique secret, batches proofs into a Merkle tree, and commits the root to Solana. One transaction proves thousands of interactions — without exposing any data on-chain.</p>
       </section>
 
@@ -99,6 +99,10 @@
         <div style="margin-top:16px;padding:16px;background:rgba(26,115,232,0.06);border:1px solid rgba(26,115,232,0.15);border-radius:8px;max-width:700px;">
           <strong style="color:#fff;font-size:0.85rem;">How it works in practice</strong>
           <p style="color:#888;font-size:0.85rem;margin:8px 0 0;">A service like a chatbot proxies user requests through IOProof. The API response includes both secrets. The service keeps <code style="color:#ccc;">secret</code> and gives <code style="color:#ccc;">user_secret</code> to the end-user (e.g. as a "View proof" link). Either party can access the full cryptographic proof and on-chain verification at any time.</p>
+        </div>
+        <div style="margin-top:16px;padding:16px;background:rgba(255,193,7,0.06);border:1px solid rgba(255,193,7,0.15);border-radius:8px;max-width:700px;">
+          <strong style="color:#ffc107;font-size:0.85rem;">Trust model</strong>
+          <p style="color:#888;font-size:0.85rem;margin:8px 0 0;">IOProof cryptographically proves <em>when</em> a proof was committed and that the recorded data hasn't changed since. For proof that a specific AI provider generated the content, IOProof captures provider response headers (request IDs, timestamps) and supports <strong style="color:#ccc;">provider-signed responses</strong> — when a provider installs <a href="https://www.npmjs.com/package/@ioproof/provider" style="color:#1a73e8;">@ioproof/provider</a>, every response is Ed25519-signed, making proofs cryptographically tamper-proof. <a href="https://github.com/alekblom/ioproof#trust-model" style="color:#1a73e8;">Read the full trust model.</a></p>
         </div>
       </section>
 

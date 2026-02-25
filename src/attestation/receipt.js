@@ -1,6 +1,6 @@
 const config = require('../config');
 
-function buildReceipt({ requestHash, responseHash, combinedHash, blindedHash, secret, userSecret, timestamp, solanaResult, batchId, merkleRoot, merkleProof }) {
+function buildReceipt({ requestHash, responseHash, combinedHash, blindedHash, secret, userSecret, timestamp, solanaResult, batchId, merkleRoot, merkleProof, providerRequestId, providerTimestamp, providerSignature }) {
   const receipt = {
     request_hash: `sha256:${requestHash}`,
     response_hash: `sha256:${responseHash}`,
@@ -14,6 +14,13 @@ function buildReceipt({ requestHash, responseHash, combinedHash, blindedHash, se
     user_verify_url: `${config.baseUrl}/verify/${combinedHash}?secret=${userSecret}`,
     privacy_note: 'Only the blinded_hash appears on-chain. Give user_secret to the end-user so both parties can verify.',
   };
+
+  if (providerRequestId) receipt.provider_request_id = providerRequestId;
+  if (providerTimestamp) receipt.provider_timestamp = providerTimestamp;
+  if (providerSignature) {
+    receipt.provider_verified = providerSignature.verified === true;
+    receipt.provider_signature = providerSignature;
+  }
 
   // If already batched (unlikely in real-time, but possible for re-queries)
   if (solanaResult?.signature) {

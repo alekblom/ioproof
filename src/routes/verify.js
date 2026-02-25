@@ -98,6 +98,12 @@ router.get('/:hash', (req, res) => {
     result.solana_signature = proof.solanaSignature || null;
     result.solana_slot = proof.solanaSlot || null;
 
+    // Include provider header audit info
+    if (proof.providerRequestId) result.provider_request_id = proof.providerRequestId;
+    if (proof.providerTimestamp) result.provider_timestamp = proof.providerTimestamp;
+    if (proof.providerHeaders) result.provider_headers = proof.providerHeaders;
+    if (proof.providerSignature) result.provider_signature = proof.providerSignature;
+
     // Load full request/response payloads
     const payload = loadPayload(proof.combinedHash);
     if (payload) {
@@ -147,7 +153,7 @@ router.get('/export/:hash', (req, res) => {
 
   // Build self-contained bundle
   const bundle = {
-    version: 1,
+    version: 2,
     exported_at: new Date().toISOString(),
     proof: {
       request_hash: proof.requestHash,
@@ -159,6 +165,10 @@ router.get('/export/:hash', (req, res) => {
       provider: proof.provider,
       target_url: proof.targetUrl || null,
       response_status: proof.responseStatus || null,
+      provider_request_id: proof.providerRequestId || null,
+      provider_timestamp: proof.providerTimestamp || null,
+      provider_headers: proof.providerHeaders || null,
+      provider_signature: proof.providerSignature || null,
     },
     merkle: {
       root: proof.merkleRoot,

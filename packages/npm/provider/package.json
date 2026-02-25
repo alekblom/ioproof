@@ -1,0 +1,30 @@
+{
+  "name": "@ioproof/provider",
+  "version": "0.1.0",
+  "description": "Cryptographic response signing middleware for AI providers — makes IOProof proofs tamper-proof with Ed25519 signatures",
+  "main": "index.js",
+  "keywords": [
+    "ioproof",
+    "provider",
+    "middleware",
+    "ed25519",
+    "signature",
+    "attestation",
+    "ai",
+    "cryptographic"
+  ],
+  "author": "Alexiuz AS",
+  "license": "MIT",
+  "homepage": "https://ioproof.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alekblom/ioproof.git",
+    "directory": "packages/npm/provider"
+  },
+  "bugs": {
+    "url": "https://github.com/alekblom/ioproof/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

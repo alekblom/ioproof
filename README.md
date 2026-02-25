@@ -248,6 +248,7 @@ This means anyone can independently verify a proof against Solana without trusti
 | Endpoint | Description |
 |---|---|
 | `POST /v1/proxy/:provider/*` | Proxy + attest any API call (requires `X-IOProof-Key`) |
+| `POST /v1/attest` | Post-hoc attestation for pre-collected request/response pairs |
 | `GET /api/verify/:hash?secret=` | Look up a proof (secret required for full details) |
 | `GET /api/verify/export/:hash?secret=` | Download self-contained proof bundle (for independent verification) |
 | `GET /api/verify/batch/:batchId` | Look up a batch by ID |
@@ -281,6 +282,9 @@ This means anyone can independently verify a proof against Solana without trusti
 | `SOLANA_CLUSTER` | devnet | Solana cluster for explorer links (`devnet`, `testnet`, `mainnet-beta`) |
 | `BATCH_INTERVAL_MS` | 3600000 | Batch processing interval (1 hour) |
 | `BATCH_MIN_PROOFS` | 1 | Minimum proofs to trigger a batch |
+| `IOPROOF_SIGNING_PRIVATE_KEY` | - | Ed25519 private key (hex) for signing IOProof's own responses |
+| `IOPROOF_SIGNING_PUBLIC_KEY` | - | Ed25519 public key (hex) served at `/.well-known/ioproof.json` |
+| `IOPROOF_SIGNING_KEY_ID` | - | Key identifier for rotation (e.g. `2026-02`) |
 
 ## Hosted vs self-hosted
 
@@ -368,6 +372,124 @@ Both secrets independently unlock full proof details. The caller keeps one and g
 - **Selective disclosure**: share a secret with a third party to prove a specific interaction occurred, without revealing any other proofs in the same batch
 
 This is a zero-knowledge-style approach using hash-based commitments — no complex ZK circuits required, just SHA-256 blinding with random nonces.
+
+## Trust model
+
+IOProof provides three distinct levels of trust, each with different verification requirements:
+
+### 1. Cryptographic (provable by anyone)
+
+The hash math, Merkle proofs, and Solana commitment are independently verifiable. Anyone with a secret can:
+
+- Re-derive SHA-256 hashes from the stored payloads
+- Walk the Merkle path to the on-chain root
+- Confirm the root matches the Solana memo transaction
+
+This proves **when** a proof was committed and that the **recorded data hasn't changed since**. No trust in IOProof is required for this level — use the [standalone verifier](https://ioproof.com/standalone-verifier) or verify manually.
+
+### 2. Auditable (verifiable with provider cooperation)
+
+AI providers return response headers with unique request IDs and server timestamps. IOProof captures these headers and includes them in the proof record:
+
+| Provider | Request ID Header | Server Timestamp | Processing Time |
+|---|---|---|---|
+| OpenAI | `x-request-id` | `date` | `openai-processing-ms` |
+| Anthropic | `request-id` | `date` | `x-envoy-upstream-service-time` |
+| xAI | `x-request-id` | `date` | `x-metrics-e2e-ms` |
+| DeepSeek | `x-ds-trace-id` | `date` | — |
+| Google Gemini | — | `date` | `server-timing` |
+
+These headers link each proof to the provider's internal logs. In an audit or dispute, the provider can confirm whether a request ID exists in their records and whether the recorded response matches. This creates an **auditable chain** from IOProof's proof to the provider's own data.
+
+Note: Google Gemini does not return a unique request ID, making it the weakest link in the audit trail. Only the `date` header is available for correlation.
+
+### 3. Provider-signed (cryptographic, when supported)
+
+AI providers can install [`@ioproof/provider`](https://www.npmjs.com/package/@ioproof/provider) — a lightweight Express middleware that Ed25519-signs every response. The signature ties the exact request content to the exact response content:
+
+1. Provider signs: `Ed25519(ioproof:v1:{SHA-256(request)}|{SHA-256(response)}|{timestamp})`
+2. IOProof captures the signature headers automatically (via existing header capture)
+3. IOProof fetches the provider's public key from `{providerBaseUrl}/.well-known/ioproof.json`
+4. IOProof verifies the signature cryptographically
+5. Proof is marked as **"Provider Verified"** — tamper-proof
+
+When a provider supports signing, proofs reach the highest trust level: anyone can verify that the provider actually processed the request and generated the response, without trusting the operator or IOProof. The signature headers are:
+
+| Header | Value |
+|---|---|
+| `X-IOProof-Sig` | Base64 Ed25519 signature |
+| `X-IOProof-Sig-Ts` | ISO timestamp used in signature |
+| `X-IOProof-Key-Id` | Key identifier for rotation |
+
+See [@ioproof/provider on npm](https://www.npmjs.com/package/@ioproof/provider) for installation instructions. Zero dependencies, 3 lines to add to an Express server.
+
+### 4. Operator trust (assumption, when provider doesn't sign)
+
+Without provider signing, IOProof proves that recorded data hasn't changed — but does **not** independently prove that an AI provider generated specific content. In a self-hosted deployment, the operator controls both the API call and the proof generation. Without provider confirmation, the operator could theoretically submit fabricated content and generate a valid-looking proof.
+
+**In practice**: IOProof proves *when* a proof was committed and that data hasn't changed since. Combined with provider response headers, it creates a strong audit trail. But in a scenario where the operator's integrity is the specific question being asked, the provider's logs — keyed by the captured request ID — would be the independent source of truth.
+
+> **Note on "without trusting each other"**: The dual-secret system (described in Privacy model above) means two parties can independently verify the *same recorded data* — neither can alter the proof without the other noticing. This is distinct from proving the data is genuine in the first place, which requires the provider's cooperation or provider signing.
+
+## Provider signing (@ioproof/provider)
+
+AI providers can make IOProof proofs tamper-proof by installing a lightweight middleware that Ed25519-signs every API response. When installed, IOProof automatically verifies the signature and marks the proof as **"Provider Verified"**.
+
+### For providers
+
+```bash
+npm install @ioproof/provider
+```
+
+```javascript
+const express = require('express');
+const { middleware, wellKnown } = require('@ioproof/provider');
+
+const app = express();
+
+// Sign every response
+app.use(middleware({
+  privateKey: process.env.IOPROOF_PRIVATE_KEY,
+  keyId: '2026-02',
+}));
+
+// Publish your public key
+app.get('/.well-known/ioproof.json', wellKnown([
+  { kid: '2026-02', publicKey: process.env.IOPROOF_PUBLIC_KEY },
+]));
+```
+
+Zero dependencies, uses only Node.js built-in `crypto`. Never crashes your API — signing errors are caught and logged.
+
+See the full README at [`packages/npm/provider/`](packages/npm/provider/README.md).
+
+### For operators (services using IOProof)
+
+No changes needed. When a provider installs `@ioproof/provider`, the signature headers are automatically captured by IOProof's existing header capture and verified server-side. The proof receipt and verification page will show the "Provider Verified" badge.
+
+### Post-hoc attestation
+
+For services that use streaming or need to submit proofs after the fact:
+
+```bash
+curl -X POST https://ioproof.com/v1/attest \
+  -H "Content-Type: application/json" \
+  -H "X-IOProof-Key: iop_live_your_key" \
+  -d '{
+    "request_body": "{\"messages\":[...]}",
+    "response_body": "{\"choices\":[...]}",
+    "provider": "openai",
+    "provider_headers": {
+      "x-request-id": "req_abc123",
+      "date": "Tue, 25 Feb 2026 21:00:00 GMT",
+      "X-IOProof-Sig": "base64signature...",
+      "X-IOProof-Sig-Ts": "2026-02-25T21:00:00.000Z",
+      "X-IOProof-Key-Id": "2026-02"
+    }
+  }'
+```
+
+The `provider_headers` field is optional. When present, IOProof extracts the provider request ID, timestamp, and verifies any provider signature automatically.
 
 ## License
 

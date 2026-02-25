@@ -40,6 +40,10 @@ function findUserBySession(sessionHash, ip) {
   ) || null;
 }
 
+function findUserByAlexiuzId(alexiuzUserId) {
+  return loadUsers().find((u) => u.alexiuzUserId === alexiuzUserId) || null;
+}
+
 async function insertUser({ email, password }) {
   const users = loadUsers();
   const passwordHash = await bcrypt.hash(password, 10);
@@ -52,6 +56,29 @@ async function insertUser({ email, password }) {
     status: 0,
     tier: 'free',
     activationHash,
+    alexiuzUserId: null,
+    sessionHash: null,
+    sessionIp: null,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null,
+  };
+
+  users.push(user);
+  saveUsers(users);
+  return user;
+}
+
+function insertSsoUser({ email, alexiuzUserId }) {
+  const users = loadUsers();
+
+  const user = {
+    id: generateUserId(),
+    email: email.toLowerCase(),
+    passwordHash: null,
+    status: 1,
+    tier: 'free',
+    activationHash: null,
+    alexiuzUserId,
     sessionHash: null,
     sessionIp: null,
     createdAt: new Date().toISOString(),
@@ -84,7 +111,9 @@ module.exports = {
   findUserByEmail,
   findUserById,
   findUserBySession,
+  findUserByAlexiuzId,
   insertUser,
+  insertSsoUser,
   updateUser,
   verifyPassword,
   generateSessionHash,

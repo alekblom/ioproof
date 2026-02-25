@@ -18,4 +18,15 @@ module.exports = {
     intervalMs: parseInt(process.env.BATCH_INTERVAL_MS, 10) || 3600000,
     minProofs: parseInt(process.env.BATCH_MIN_PROOFS, 10) || 1,
   },
+  providerSig: {
+    privateKey: process.env.IOPROOF_SIGNING_PRIVATE_KEY || null,
+    publicKey: process.env.IOPROOF_SIGNING_PUBLIC_KEY || null,
+    keyId: process.env.IOPROOF_SIGNING_KEY_ID || null,
+  },
+  alexiuzDb: {
+    host: process.env.ALEXIUZ_DB_HOST || 'localhost',
+    user: process.env.ALEXIUZ_DB_USER || '',
+    password: process.env.ALEXIUZ_DB_PASSWORD || '',
+    database: process.env.ALEXIUZ_DB_NAME || '',
+  },
 };

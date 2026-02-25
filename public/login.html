@@ -20,6 +20,13 @@
     .auth-link { text-align: center; margin-top: 16px; color: #888; font-size: 0.9rem; }
     .auth-link a { color: #1a73e8; text-decoration: none; }
     .auth-link a:hover { text-decoration: underline; }
+    .auth-divider { display: flex; align-items: center; margin: 20px 0; color: #555; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-bottom: 1px solid #333; }
+    .auth-divider::before { margin-right: 12px; }
+    .auth-divider::after { margin-left: 12px; }
+    .sso-btn { width: 100%; padding: 12px 16px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.2s, border-color 0.2s; }
+    .sso-btn:hover { background: #222; border-color: #1a73e8; }
+    .sso-btn img { width: 20px; height: 20px; }
   </style>
 </head>
 <body>
@@ -45,17 +52,28 @@
         </div>
         <button type="submit" class="auth-btn">Sign In</button>
       </form>
+      <div class="auth-divider">or</div>
+      <a href="https://alexiuz.com/login?return_to=https%3A%2F%2Fioproof.com%2Fauth%2Fsso%2Fcallback" class="sso-btn">
+        Sign In with Alexiuz
+      </a>
       <div class="auth-link">
-        Don't have an account? <a href="/register">Create one</a>
+        Don't have an account? <a href="/register">Create one</a> or <a href="https://alexiuz.com/register?return_to=https%3A%2F%2Fioproof.com%2Fauth%2Fsso%2Fcallback">sign up via Alexiuz</a>
       </div>
     </div>
   </div>
 
   <script>
     // Show activation success if redirected from activate
-    if (new URLSearchParams(location.search).get('activated') === 'true') {
+    const params = new URLSearchParams(location.search);
+    if (params.get('activated') === 'true') {
       const el = document.getElementById('success');
       el.textContent = 'Account activated! You can now sign in.';
+      el.style.display = 'block';
+    }
+    if (params.get('error')) {
+      const el = document.getElementById('error');
+      const msgs = { 'invalid-token': 'SSO token invalid or expired. Please try again.', 'sso-failed': 'SSO login failed. Please try again.' };
+      el.textContent = msgs[params.get('error')] || 'Login failed. Please try again.';
       el.style.display = 'block';
     }
 

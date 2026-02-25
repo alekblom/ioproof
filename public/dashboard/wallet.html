@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Setup - IOProof</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+  <style>
+    .guide-step { background: #141414; border: 1px solid #222; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    .guide-step h3 { margin-bottom: 12px; font-size: 1rem; text-transform: none; letter-spacing: normal; }
+    .guide-step p { color: #aaa; font-size: 0.9rem; line-height: 1.6; margin-bottom: 12px; }
+    .guide-step code { background: #0a0a0a; border: 1px solid #333; border-radius: 4px; padding: 2px 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; color: #8bc34a; }
+    .guide-step pre { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; color: #e0e0e0; overflow-x: auto; margin: 12px 0; line-height: 1.5; }
+    .guide-step .wallet-icon { font-size: 1.4rem; margin-right: 8px; vertical-align: middle; }
+    .guide-step ol { color: #aaa; font-size: 0.9rem; line-height: 2; padding-left: 20px; }
+    .guide-step ol li { margin-bottom: 4px; }
+    .converter-wrap { margin-top: 16px; }
+    .converter-wrap textarea { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 12px; color: #fff; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; resize: vertical; }
+    .converter-wrap textarea:focus { outline: none; border-color: #1a73e8; }
+    .converter-result { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.75rem; color: #8bc34a; word-break: break-all; margin-top: 12px; display: none; user-select: all; }
+    .converter-actions { display: flex; gap: 12px; margin-top: 12px; align-items: center; }
+    .converter-msg { font-size: 0.8rem; color: #888; }
+    .converter-msg.error { color: #e74c3c; }
+    .converter-msg.success { color: #8bc34a; }
+    .wallet-tab { display: inline-block; padding: 8px 16px; border: 1px solid #333; border-radius: 6px 6px 0 0; cursor: pointer; color: #888; font-size: 0.85rem; background: none; border-bottom: none; margin-right: 4px; }
+    .wallet-tab.active { color: #fff; background: #141414; border-color: #222; }
+    .wallet-tabs { border-bottom: 1px solid #222; margin-bottom: 0; }
+    .wallet-panel { display: none; }
+    .wallet-panel.active { display: block; }
+    .security-note { background: rgba(255, 152, 0, 0.08); border: 1px solid rgba(255, 152, 0, 0.2); border-radius: 6px; padding: 12px 16px; color: #ff9800; font-size: 0.8rem; margin-top: 16px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <a href="/"><img src="/logo.svg" alt="" width="28" height="28"> IOProof</a>
+    </div>
+    <div class="dash-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+    <nav class="dash-sidebar">
+      <a href="/dashboard">Overview</a>
+      <a href="/dashboard/proofs">My Proofs</a>
+      <a href="/dashboard/keys">API Keys</a>
+      <a href="/dashboard/usage">Usage</a>
+      <a href="/dashboard/wallet">Wallet</a>
+      <a href="/dashboard/account">Account</a>
+    </nav>
+
+    <main class="dash-main">
+      <h2>Solana Wallet Setup</h2>
+      <p style="color:#888;margin-bottom:24px;">IOProof anchors proof batches on Solana for tamper-proof verification. Connect your wallet to enable on-chain attestation.</p>
+
+      <div class="guide-step">
+        <h3>How It Works</h3>
+        <p>Every hour, IOProof batches your proofs into a Merkle tree and writes the root hash to Solana as a memo transaction. This costs ~0.000005 SOL per batch (fractions of a cent). Even 0.01 SOL lasts thousands of batches.</p>
+        <p>IOProof needs your wallet's <strong>private key</strong> to sign transactions automatically. The key is stored in your server's <code>.env</code> file and never leaves your machine.</p>
+      </div>
+
+      <div class="wallet-tabs">
+        <button class="wallet-tab active" data-tab="phantom">Phantom</button>
+        <button class="wallet-tab" data-tab="solflare">Solflare</button>
+        <button class="wallet-tab" data-tab="cli">Solana CLI</button>
+        <button class="wallet-tab" data-tab="new">New Wallet</button>
+      </div>
+
+      <div class="guide-step" style="border-radius: 0 8px 8px 8px;">
+
+        <div class="wallet-panel active" id="panel-phantom">
+          <h3><span class="wallet-icon">👻</span> Export from Phantom</h3>
+          <ol>
+            <li>Open Phantom browser extension</li>
+            <li>Click the <strong>hamburger menu</strong> (≡) → <strong>Settings</strong></li>
+            <li>Select your Solana account</li>
+            <li>Tap <strong>Show Secret Recovery Phrase</strong> or <strong>Export Private Key</strong></li>
+            <li>Enter your password → copy the <strong>Base58 private key</strong></li>
+            <li>Paste it in the converter below to get the JSON format</li>
+          </ol>
+        </div>
+
+        <div class="wallet-panel" id="panel-solflare">
+          <h3><span class="wallet-icon">🌞</span> Export from Solflare</h3>
+          <ol>
+            <li>Open Solflare browser extension or app</li>
+            <li>Go to <strong>Settings</strong> → <strong>Export Private Key</strong></li>
+            <li>Enter your password</li>
+            <li>Copy the <strong>Base58 private key</strong></li>
+            <li>Paste it in the converter below to get the JSON format</li>
+          </ol>
+        </div>
+
+        <div class="wallet-panel" id="panel-cli">
+          <h3><span class="wallet-icon">⌨️</span> Solana CLI</h3>
+          <p>If you generated your wallet with <code>solana-keygen</code>, the key file is already in JSON byte array format:</p>
+          <pre>cat ~/.config/solana/id.json</pre>
+          <p>Copy the entire JSON array and paste it as <code>SOLANA_KEYPAIR_SECRET</code> in your <code>.env</code> file.</p>
+        </div>
+
+        <div class="wallet-panel" id="panel-new">
+          <h3><span class="wallet-icon">🆕</span> Generate a New Wallet</h3>
+          <p>If you don't have a Solana wallet yet, generate one directly with IOProof:</p>
+          <pre>cd /path/to/ioproof
+node -e "
+const { Keypair } = require('@solana/web3.js');
+const kp = Keypair.generate();
+console.log('Address:', kp.publicKey.toBase58());
+console.log('Secret:', JSON.stringify(Array.from(kp.secretKey)));
+"</pre>
+          <p>Copy the <code>Secret</code> output into your <code>.env</code> as <code>SOLANA_KEYPAIR_SECRET</code>, then send a small amount of SOL to the <code>Address</code>.</p>
+        </div>
+
+        <div class="converter-wrap">
+          <h3 style="margin-bottom:12px;">Key Converter</h3>
+          <p style="color:#888;font-size:0.85rem;margin-bottom:8px;">Paste your Base58 private key to convert it to the JSON format needed for <code>.env</code>:</p>
+          <textarea id="base58-input" rows="2" placeholder="Paste Base58 private key here (e.g. 4wBqpZM9k1...)" spellcheck="false"></textarea>
+          <div class="converter-actions">
+            <button class="btn-primary" id="convert-btn">Convert</button>
+            <button class="btn-primary" id="copy-result-btn" style="background:#333;display:none;">Copy</button>
+            <span class="converter-msg" id="converter-msg"></span>
+          </div>
+          <div class="converter-result" id="converter-result"></div>
+        </div>
+
+        <div class="security-note">
+          <strong>Security:</strong> The converter runs entirely in your browser — your private key is never sent to any server. For maximum security, you can also use the CLI method or run the converter offline.
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <h3>Configure .env</h3>
+        <p>Add these lines to your IOProof <code>.env</code> file:</p>
+        <pre># Solana mainnet (or use https://api.devnet.solana.com for testing)
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+SOLANA_CLUSTER=mainnet-beta
+
+# Paste your JSON byte array key here
+SOLANA_KEYPAIR_SECRET=[your,key,bytes,here]</pre>
+        <p>Then restart IOProof:</p>
+        <pre>pm2 restart ioproof</pre>
+      </div>
+
+      <div class="guide-step">
+        <h3>Without a Wallet</h3>
+        <p>IOProof works fine without Solana. Proofs are still hashed, batched into Merkle trees, and verifiable locally. The only difference is there's no on-chain anchor — which means you (the operator) could theoretically tamper with proofs. For most use cases, local verification is sufficient.</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/dashboard/dashboard.js"></script>
+  <script src="https://unpkg.com/bs58@6.0.0/dist/index.umd.js"></script>
+  <script>
+    // Tab switching
+    document.querySelectorAll('.wallet-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.wallet-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.wallet-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Base58 to JSON converter
+    document.getElementById('convert-btn').addEventListener('click', () => {
+      const input = document.getElementById('base58-input').value.trim();
+      const msg = document.getElementById('converter-msg');
+      const result = document.getElementById('converter-result');
+      const copyBtn = document.getElementById('copy-result-btn');
+
+      msg.textContent = '';
+      msg.className = 'converter-msg';
+      result.style.display = 'none';
+      copyBtn.style.display = 'none';
+
+      if (!input) {
+        msg.textContent = 'Please paste a private key.';
+        msg.className = 'converter-msg error';
+        return;
+      }
+
+      try {
+        let bytes;
+        // Try Base58 decode
+        if (typeof bs58 !== 'undefined' && typeof bs58.decode === 'function') {
+          bytes = bs58.decode(input);
+        } else if (typeof bs58 !== 'undefined' && typeof bs58.default !== 'undefined') {
+          bytes = bs58.default.decode(input);
+        } else {
+          msg.textContent = 'Base58 library failed to load. Use the CLI method instead.';
+          msg.className = 'converter-msg error';
+          return;
+        }
+
+        if (bytes.length !== 64) {
+          msg.textContent = `Invalid key length (${bytes.length} bytes, expected 64). Make sure you're pasting the private key, not the public key or seed phrase.`;
+          msg.className = 'converter-msg error';
+          return;
+        }
+
+        const jsonArray = JSON.stringify(Array.from(bytes));
+
+        // Show the public key too
+        // First 32 bytes = private, last 32 = public
+        // Actually for Solana, the 64 bytes are the full keypair
+        result.textContent = jsonArray;
+        result.style.display = 'block';
+        copyBtn.style.display = 'inline-block';
+        msg.textContent = 'Paste this as SOLANA_KEYPAIR_SECRET in your .env file.';
+        msg.className = 'converter-msg success';
+      } catch (e) {
+        msg.textContent = 'Invalid Base58 key: ' + e.message;
+        msg.className = 'converter-msg error';
+      }
+    });
+
+    document.getElementById('copy-result-btn').addEventListener('click', () => {
+      const text = document.getElementById('converter-result').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById('copy-result-btn').textContent = 'Copied!';
+        setTimeout(() => { document.getElementById('copy-result-btn').textContent = 'Copy'; }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>

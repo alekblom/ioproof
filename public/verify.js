@@ -68,6 +68,15 @@
         html += field('Provider', data.provider);
         if (data.target_url) html += field('Target URL', data.target_url);
         if (data.response_status) html += field('Response Status', data.response_status);
+        if (data.provider_request_id) html += field('Provider Request ID', '<span style="color:#ffc107">' + escHtml(data.provider_request_id) + '</span>');
+        if (data.provider_timestamp) html += field('Provider Timestamp', escHtml(data.provider_timestamp));
+        if (data.provider_signature) {
+          if (data.provider_signature.verified === true) {
+            html += '<div class="provider-verified-badge">Provider Verified</div>';
+          } else {
+            html += '<div class="provider-sig-failed">Provider signature invalid</div>';
+          }
+        }
       } else {
         // No secret or invalid — show limited info
         html += field('Blinded Hash', data.blinded_hash);
