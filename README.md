@@ -435,33 +435,74 @@ Without provider signing, IOProof proves that recorded data hasn't changed — b
 
 AI providers can make IOProof proofs tamper-proof by installing a lightweight middleware that Ed25519-signs every API response. When installed, IOProof automatically verifies the signature and marks the proof as **"Provider Verified"**.
 
-### For providers
+SDKs available for **Node.js**, **Python**, and **Go**. Generate keys with the CLI:
+
+```bash
+npx @ioproof/provider init
+```
+
+### Node.js (Express)
 
 ```bash
 npm install @ioproof/provider
 ```
 
 ```javascript
-const express = require('express');
 const { middleware, wellKnown } = require('@ioproof/provider');
 
-const app = express();
-
-// Sign every response
 app.use(middleware({
   privateKey: process.env.IOPROOF_PRIVATE_KEY,
-  keyId: '2026-02',
+  keyId: process.env.IOPROOF_KEY_ID,
 }));
 
-// Publish your public key
 app.get('/.well-known/ioproof.json', wellKnown([
-  { kid: '2026-02', publicKey: process.env.IOPROOF_PUBLIC_KEY },
+  { kid: process.env.IOPROOF_KEY_ID, publicKey: process.env.IOPROOF_PUBLIC_KEY },
 ]));
 ```
 
 Zero dependencies, uses only Node.js built-in `crypto`. Never crashes your API — signing errors are caught and logged.
 
-See the full README at [`packages/npm/provider/`](packages/npm/provider/README.md).
+### Python (FastAPI)
+
+```bash
+pip install ioproof
+```
+
+```python
+from ioproof.middleware_fastapi import IOProofMiddleware, well_known_route
+
+app.add_middleware(IOProofMiddleware,
+    private_key=os.environ["IOPROOF_PRIVATE_KEY"],
+    key_id=os.environ["IOPROOF_KEY_ID"])
+
+@app.get("/.well-known/ioproof.json")
+async def ioproof_keys():
+    return well_known_route([{"kid": os.environ["IOPROOF_KEY_ID"],
+                              "public_key": os.environ["IOPROOF_PUBLIC_KEY"]}])
+```
+
+Also supports Flask — see `ioproof.middleware_flask`.
+
+### Go (net/http)
+
+```bash
+go get github.com/ioproof/go-provider
+```
+
+```go
+import ioproof "github.com/ioproof/go-provider"
+
+handler := ioproof.Middleware(os.Getenv("IOPROOF_PRIVATE_KEY"),
+    os.Getenv("IOPROOF_KEY_ID"))(mux)
+```
+
+Zero dependencies — Go standard library only. Works with chi, gorilla/mux, and stdlib.
+
+### Full documentation
+
+- [Provider onboarding guide](docs/provider-onboarding.md) — step-by-step setup for all languages
+- [Trust model for providers](docs/trust-model-for-providers.md) — security team reference
+- [Runnable examples](docs/examples/) — copy-paste examples for Express, FastAPI, Flask, Go
 
 ### For operators (services using IOProof)
 
